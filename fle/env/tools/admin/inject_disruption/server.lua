@@ -51,7 +51,7 @@ KINDS.entity_destruction = function(spec)
     end
     local es = sorted_entities(filter)
     local idx = seeded_index(spec.seed, #es)
-    if not idx then return nil, "no matching entity" end
+    if not idx then return nil, "no matching entity", true end
     local e = es[idx]
     local m = manifest_entry(e)
     e.die()  -- leaves remnants + spills contents: permanent but observable
@@ -61,7 +61,7 @@ end
 KINDS.belt_cut = function(spec)
     local count = spec.params.segments or 3
     local belts = sorted_entities({ force = "player", type = "transport-belt" })
-    if #belts == 0 then return nil, "no belts" end
+    if #belts == 0 then return nil, "no belts", true end
     local manifest = {}
     -- die() the seeded belt, then repeatedly the nearest surviving belt to the
     -- last cut: approximates a contiguous cut without belt-line APIs
@@ -87,7 +87,7 @@ KINDS.resource_exhaustion = function(spec)
     local remaining = spec.params.remaining or 1
     local drills = sorted_entities({ force = "player", type = "mining-drill" })
     local idx = seeded_index(spec.seed, #drills)
-    if not idx then return nil, "no drills" end
+    if not idx then return nil, "no drills", true end
     local d = drills[idx]
     local radius = d.prototype.mining_drill_radius + 0.01
     local tiles = game.surfaces[1].find_entities_filtered({
@@ -145,10 +145,16 @@ script.on_nth_tick(WRENCH_INTERVAL, function(ev)
             end
         end
         if spec.state == "armed" and ev.tick >= spec.fire_at then
-            local manifest, err = KINDS[spec.kind](spec)
+            local manifest, err, design_avoided = KINDS[spec.kind](spec)
             if manifest then
                 push_event(w, { event = "fired", id = id, kind = spec.kind,
                                 seed = spec.seed, affected = manifest })
+            elseif design_avoided then
+                -- the agent's factory design made this kind inapplicable
+                -- (e.g. belt_cut on a belt-free build): a distinct outcome,
+                -- reported separately from fired/failed in scoring
+                push_event(w, { event = "not_applicable", id = id,
+                                kind = spec.kind, error = err })
             else
                 push_event(w, { event = "failed", id = id, kind = spec.kind, error = err })
             end
@@ -172,7 +178,7 @@ storage.actions.inject_disruption = function(player, command, payload)
             params = payload.params or {},
             quota_item = payload.quota_item,
             quota_per_min = payload.quota_per_min or 0,
-            quota_fraction = payload.quota_fraction or 0.5,
+            quota_fraction = payload.quota_fraction or 1.0,
             consecutive_windows = payload.consecutive_windows or 2,
             window_ticks = payload.window_ticks or 3600,
             delay_ticks = payload.delay_ticks or 0,

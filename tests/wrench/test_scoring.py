@@ -207,7 +207,23 @@ class TestDetectionMetrics:
 
     def test_no_reports_no_fires_vacuous(self):
         m = detection_metrics([], [])
-        assert m == {"latencies": [], "precision": 1.0, "recall": 1.0}
+        assert m == {
+            "latencies": [],
+            "precision": 1.0,
+            "precision_strict": 1.0,
+            "recall": 1.0,
+        }
+
+    def test_strict_radius_separates_nearby_from_exact(self):
+        # the first Sonnet pilot: a full-chest report 6.7 tiles from the
+        # destroyed drill counted as a match at radius 10 but should not
+        # at the strict 3-tile radius
+        fire = fired(6000, [{"name": "burner-mining-drill", "x": 16.0, "y": 71.0}])
+        exact = report(7000, x=16.0, y=71.0)
+        nearby = report(8000, x=20.5, y=75.5)  # ~6.7 tiles away
+        m = detection_metrics([fire, exact, nearby], [fire])
+        assert m["precision"] == 1.0
+        assert m["precision_strict"] == 0.5
 
     def test_missed_fire(self):
         fire = fired(6000, [{"name": "stone-furnace", "x": 2.0, "y": 0.0}])

@@ -28,8 +28,12 @@ class DisruptionKind(str, Enum):
 class Precondition(BaseModel, frozen=True, extra="forbid"):
     """Arm the disruption only once the factory demonstrably works."""
 
-    # trailing throughput must reach this fraction of the task quota...
-    quota_fraction: float = Field(default=0.5, gt=0, le=1)
+    # Trailing throughput must reach this fraction of the task quota...
+    # Default 1.0: arming below full quota lets the fire land mid-ramp,
+    # where the frozen baseline underestimates the counterfactual ceiling
+    # and inflates TR (observed in the first Sonnet pilot: baseline 9.1/min
+    # on a factory that reached 38/min).
+    quota_fraction: float = Field(default=1.0, gt=0, le=1)
     # ...for this many consecutive sample windows before the spec arms.
     consecutive_windows: int = Field(default=2, ge=1)
 

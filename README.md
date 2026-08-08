@@ -52,6 +52,19 @@ window — a disruption the factory shrugs off by itself doesn't measure
 recovery and doesn't ship. v1 kinds: `entity_destruction`, `belt_cut`,
 `resource_exhaustion` (all permanent, all deterministic per seed).
 
+Two honest edges, learned from pilot runs and reported rather than hidden:
+
+- **Design-avoided disruptions.** An agent that builds without belts can't
+  have its belts cut. Those outcomes are recorded as `not_applicable` and
+  reported in their own column — avoiding a fault class through design is a
+  different (interesting) result than surviving one, and conflating the two
+  would reward degenerate builds.
+- **TR on still-growing factories.** Disruptions arm only at full quota, so
+  the frozen baseline reflects a proven factory — but an agent that was about
+  to scale further can exceed baseline post-repair (TR > 1, capped at 1.5).
+  TR is therefore conservative for ramping factories; recovery-rate-at-budget
+  is the cleaner headline for those runs.
+
 ## Relationship to prior work
 
 WRENCH is a hard fork of the [Factorio Learning Environment](https://github.com/JackHopkins/factorio-learning-environment)

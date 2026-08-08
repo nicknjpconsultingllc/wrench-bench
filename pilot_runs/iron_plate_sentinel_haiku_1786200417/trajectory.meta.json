@@ -1,0 +1,11 @@
+{
+  "task": "iron_plate_sentinel",
+  "model": "haiku",
+  "steps": 8,
+  "fires": 0,
+  "detection": {
+    "latencies": [],
+    "precision": 1.0,
+    "recall": 1.0
+  }
+}

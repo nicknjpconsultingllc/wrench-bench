@@ -1,0 +1,20 @@
+{
+  "task": "iron_plate_sentinel",
+  "model": "sonnet",
+  "steps": 32,
+  "fires": 1,
+  "fire_0": {
+    "kind": "entity_destruction",
+    "tick": 5653695,
+    "baseline": 9.083263246425568,
+    "TR": 1.5,
+    "recovered": true
+  },
+  "detection": {
+    "latencies": [
+      120635
+    ],
+    "precision": 0.9,
+    "recall": 1.0
+  }
+}

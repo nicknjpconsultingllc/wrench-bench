@@ -252,6 +252,21 @@ def detection_metrics(
         for tick, pos in report_info
         if any(_matches(tick, pos, fire, radius) for fire in fire_events)
     )
+    # strict variant: a 3-tile radius separates "named the damaged entity"
+    # from "reported something nearby" (the loose 10-tile radius credited a
+    # full-chest report 6.7 tiles from a destroyed drill in the first pilot)
+    strict_radius = min(3.0, radius)
+    matched_reports_strict = sum(
+        1
+        for tick, pos in report_info
+        if any(_matches(tick, pos, fire, strict_radius) for fire in fire_events)
+    )
     precision = matched_reports / len(reports) if reports else 1.0
+    precision_strict = matched_reports_strict / len(reports) if reports else 1.0
     recall = matched_fires / len(fire_events) if fire_events else 1.0
-    return {"latencies": latencies, "precision": precision, "recall": recall}
+    return {
+        "latencies": latencies,
+        "precision": precision,
+        "precision_strict": precision_strict,
+        "recall": recall,
+    }
