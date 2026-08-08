@@ -47,10 +47,12 @@ class TestUnit:
         from fle.eval.tasks.task_definitions.task_registry import create_task
 
         for key in ("iron_plate_sentinel", "iron_gear_sentinel",
-                    "copper_cable_sentinel"):
+                    "copper_cable_sentinel", "iron_plate_adaptive_sentinel"):
             task = create_task(key)
             assert isinstance(task, DisruptionRecoveryTask)
-            assert len(task.disruptions) == 2
+            assert len(task.disruptions) == (
+                1 if key == "iron_plate_adaptive_sentinel" else 2
+            )
             # The goal may mention that disruptions exist and the tools to
             # respond, but never schedule or seeds.
             goal = task.goal_description.lower()
