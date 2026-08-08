@@ -195,7 +195,7 @@ def write_markdown(path: Path, aggregates, rows, args):
         "## Per-(model, task) aggregates",
         "",
         "| Model | Task | Episodes | Fires | TR | Recovery | Det. recall "
-        "| Det. precision | Det. precision (strict) | Det. latency (ticks) |",
+        "| Det. precision (strict, 3-tile) | Det. precision (loose, 10-tile) | Det. latency (ticks) |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for a in aggregates:
@@ -203,8 +203,8 @@ def write_markdown(path: Path, aggregates, rows, args):
             f"| {a['model']} | {a['task']} | {a['episodes_ok']}/{a['episodes']} "
             f"| {a['fires']} | {_fmt(a['throughput_retained'])} "
             f"| {_fmt(a['recovery_rate'], 2)} | {_fmt(a['detection_recall'], 2)} "
-            f"| {_fmt(a['detection_precision'], 2)} "
             f"| {_fmt(a['detection_precision_strict'], 2)} "
+            f"| {_fmt(a['detection_precision'], 2)} "
             f"| {_fmt(a['mean_detection_latency_ticks'], 0)} |"
         )
     lines += [

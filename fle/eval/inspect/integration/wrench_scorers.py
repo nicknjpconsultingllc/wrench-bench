@@ -213,8 +213,8 @@ def detection_scorer() -> Scorer:
             explanation=(
                 f"Detection over {counts['num_fires']} fire(s), "
                 f"{counts['num_reports']} report(s): recall={metrics['recall']:.2f}, "
-                f"precision={metrics['precision']:.2f} "
-                f"(strict {metrics['precision_strict']:.2f})"
+                f"precision_strict={metrics['precision_strict']:.2f} "
+                f"(loose {metrics['precision']:.2f})"
             ),
             metadata={
                 "precision": metrics["precision"],

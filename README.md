@@ -18,7 +18,7 @@ measures, against ground truth the agent never sees:
 
 | Metric | Question it answers |
 |---|---|
-| **Detection** (precision / recall / latency) | Did the agent notice, how fast, and does it report real faults or hallucinate them? Detection is an overt act: the agent declares faults via a `report_fault` tool. |
+| **Detection** (precision / recall / latency) | Did the agent notice, how fast, and does it report real faults or hallucinate them? Detection is an overt act: the agent declares faults via a `report_fault` tool. Headline precision uses a strict 3-tile match radius — pilot analysis showed a loose radius credits unrelated nearby reports (an agent scored recall 1.0 on a disruption it demonstrably never noticed; see [the failure taxonomy](docs/failure_taxonomy.md)). |
 | **Throughput Retained (TR)** | How much production survived, as a pooled ratio against the factory's own frozen pre-disruption rate — 0 = did no better than abandoning it, 1 = full recovery, winsorized to [-0.5, 1.5]. |
 | **Recovery rate at budget** | Did throughput return to ≥90% of baseline within a fixed game-tick budget, sustained? Reported as a proportion — no censoring pathology. |
 
