@@ -58,6 +58,20 @@ class DisruptionRecoveryTask(ThroughputTask):
         self.engine_ids: Dict[int, int] = {}
         self.ledger: Optional[EventLedger] = None
 
+    def with_seed_offset(self, offset: int) -> "DisruptionRecoveryTask":
+        """Shift every DisruptionSpec seed by ``offset``; returns self.
+
+        Per-seed table runs vary an episode by offsetting each spec's seed
+        (offset 0 keeps the canonical registry configuration). Must be
+        called before ``setup_instance`` -- arming reads the spec seeds.
+        """
+        if offset:
+            self.disruptions = [
+                spec.model_copy(update={"seed": spec.seed + offset})
+                for spec in self.disruptions
+            ]
+        return self
+
     @property
     def quota_item(self) -> str:
         """The tracked item name (throughput_entity as a plain string)."""

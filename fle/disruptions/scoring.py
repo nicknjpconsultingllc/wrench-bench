@@ -117,6 +117,39 @@ def frozen_baseline(
     return produced * TICKS_PER_MINUTE / dt
 
 
+def throughput_retained_parts(
+    samples: Sequence[dict],
+    item: str,
+    fire_tick: int,
+    horizon_ticks: int,
+) -> Optional[Tuple[float, float]]:
+    """Raw (actual, expected) production integrals behind throughput_retained.
+
+    ``actual`` is the production over ``[fire_tick, fire_tick + horizon]``;
+    ``expected`` is ``frozen_baseline rate x horizon``. Un-winsorized, so
+    callers aggregating across fires/seeds can pool correctly (sum of
+    numerators / sum of denominators) instead of averaging ratios. Returns
+    None under the same denominator policy as ``throughput_retained``.
+    """
+    baseline = frozen_baseline(samples, item, fire_tick)
+    if baseline is None or baseline < MIN_BASELINE_RATE:
+        return None
+    ordered = _sorted_samples(samples)
+    c0 = _count_at(ordered, item, fire_tick)
+    c1 = _count_at(ordered, item, fire_tick + horizon_ticks)
+    if c0 is None or c1 is None:
+        return None
+    expected = baseline * horizon_ticks / TICKS_PER_MINUTE
+    if expected <= 0:
+        return None
+    return (c1 - c0, expected)
+
+
+def winsorize_tr(ratio: float) -> float:
+    """Clamp a TR ratio to [-0.5, 1.5] (see throughput_retained)."""
+    return max(-0.5, min(1.5, ratio))
+
+
 def throughput_retained(
     samples: Sequence[dict],
     item: str,
@@ -131,19 +164,15 @@ def throughput_retained(
     Winsorized to [-0.5, 1.5] so pathological curves (counter resets,
     overshoot) cannot dominate an aggregate. Returns None when the frozen
     baseline is unavailable or near zero (< MIN_BASELINE_RATE items/min) --
-    see the module docstring for the denominator policy.
+    see the module docstring for the denominator policy. Use
+    ``throughput_retained_parts`` when you need the raw integrals for
+    cross-episode pooling.
     """
-    baseline = frozen_baseline(samples, item, fire_tick)
-    if baseline is None or baseline < MIN_BASELINE_RATE:
+    parts = throughput_retained_parts(samples, item, fire_tick, horizon_ticks)
+    if parts is None:
         return None
-    ordered = _sorted_samples(samples)
-    c0 = _count_at(ordered, item, fire_tick)
-    c1 = _count_at(ordered, item, fire_tick + horizon_ticks)
-    if c0 is None or c1 is None:
-        return None
-    expected = baseline * horizon_ticks / TICKS_PER_MINUTE
-    ratio = (c1 - c0) / expected
-    return max(-0.5, min(1.5, ratio))
+    actual, expected = parts
+    return winsorize_tr(actual / expected)
 
 
 def recovery_at(
@@ -214,22 +243,18 @@ def _matches(report_tick, report_pos, fire_event, radius) -> bool:
     return False
 
 
-def detection_metrics(
+def detection_counts(
     ledger_entries: Sequence,
     fire_events: Sequence,
     radius: float = 10.0,
 ) -> Dict:
-    """Detection latency/precision/recall from report_fault vs fired events.
+    """Raw match counts behind ``detection_metrics``.
 
-    A report matches a fired event when its (x, y) is within ``radius`` of
-    any affected entity of that event and its tick is >= the fire tick.
-
-    - ``latencies``: for each fired event (in order), the tick delta to the
-      FIRST matching report; events never matched contribute no latency.
-    - ``precision``: fraction of report_fault entries matching some fired
-      event. 1.0 when there are no reports (vacuously no false positives).
-    - ``recall``: fraction of fired events ever matched. 1.0 when there are
-      no fired events.
+    Returns latencies plus the integer numerators/denominators
+    (``matched_reports[_strict]`` / ``num_reports``, ``matched_fires`` /
+    ``num_fires``) so callers can pool detection precision/recall across
+    episodes and seeds (sum numerators / sum denominators) instead of
+    averaging per-episode ratios.
     """
     reports = [e for e in ledger_entries if _get(e, "event") == "report_fault"]
     report_info = [(int(_get(r, "tick", 0)), _report_position(r)) for r in reports]
@@ -261,11 +286,45 @@ def detection_metrics(
         for tick, pos in report_info
         if any(_matches(tick, pos, fire, strict_radius) for fire in fire_events)
     )
-    precision = matched_reports / len(reports) if reports else 1.0
-    precision_strict = matched_reports_strict / len(reports) if reports else 1.0
-    recall = matched_fires / len(fire_events) if fire_events else 1.0
     return {
         "latencies": latencies,
+        "matched_reports": matched_reports,
+        "matched_reports_strict": matched_reports_strict,
+        "num_reports": len(reports),
+        "matched_fires": matched_fires,
+        "num_fires": len(fire_events),
+    }
+
+
+def detection_metrics(
+    ledger_entries: Sequence,
+    fire_events: Sequence,
+    radius: float = 10.0,
+) -> Dict:
+    """Detection latency/precision/recall from report_fault vs fired events.
+
+    A report matches a fired event when its (x, y) is within ``radius`` of
+    any affected entity of that event and its tick is >= the fire tick.
+
+    - ``latencies``: for each fired event (in order), the tick delta to the
+      FIRST matching report; events never matched contribute no latency.
+    - ``precision``: fraction of report_fault entries matching some fired
+      event. 1.0 when there are no reports (vacuously no false positives).
+    - ``recall``: fraction of fired events ever matched. 1.0 when there are
+      no fired events.
+
+    Use ``detection_counts`` when you need the raw numerators/denominators
+    for cross-episode pooling.
+    """
+    c = detection_counts(ledger_entries, fire_events, radius)
+    num_reports = c["num_reports"]
+    precision = c["matched_reports"] / num_reports if num_reports else 1.0
+    precision_strict = (
+        c["matched_reports_strict"] / num_reports if num_reports else 1.0
+    )
+    recall = c["matched_fires"] / c["num_fires"] if c["num_fires"] else 1.0
+    return {
+        "latencies": c["latencies"],
         "precision": precision,
         "precision_strict": precision_strict,
         "recall": recall,
