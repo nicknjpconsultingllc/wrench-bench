@@ -107,8 +107,9 @@ class EntitySpritesheetExtractor:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_path = Path(temp_dir)
 
-                # Run basisu transcoder
-                cmd = ["basisu", "-unpack", str(basis_path)]
+                # Run basisu transcoder. cwd is the temp dir, so the input
+                # path must be absolute or basisu fails to read it.
+                cmd = ["basisu", "-unpack", str(Path(basis_path).resolve())]
                 result = subprocess.run(
                     cmd, cwd=temp_path, capture_output=True, text=True
                 )

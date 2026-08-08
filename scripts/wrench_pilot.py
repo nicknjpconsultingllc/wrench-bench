@@ -70,9 +70,20 @@ def main():
     ap.add_argument(
         "--no-render",
         action="store_true",
-        help="skip per-step schematic frames + timelapse assembly",
+        help="skip per-step frames + timelapse assembly",
+    )
+    ap.add_argument(
+        "--schematic",
+        action="store_true",
+        help="force the schematic renderer even when sprites are installed",
     )
     args = ap.parse_args()
+
+    # sprite renderer needs the extracted sprite set (fle sprites); fall back
+    # to the schematic renderer when absent
+    use_sprites = not args.schematic and any(Path(".fle/sprites").glob("*.png"))
+    if not args.no_render:
+        print(f"renderer: {'sprites' if use_sprites else 'schematic'}")
 
     task = create_task(args.task)
     steps = args.steps or task.trajectory_length
@@ -126,9 +137,12 @@ def main():
             try:
                 frames_dir = run_dir / "frames"
                 frames_dir.mkdir(exist_ok=True)
-                inst.controllers["render_simple"]().save(
-                    str(frames_dir / f"step_{step:03d}.png")
+                frame = (
+                    inst.controllers["render"]()
+                    if use_sprites
+                    else inst.controllers["render_simple"]()
                 )
+                frame.save(str(frames_dir / f"step_{step:03d}.png"))
             except Exception as exc:  # noqa: BLE001
                 print(f"[step {step}] frame render failed: {exc}")
         tp = task_response.meta.get(task.throughput_key, 0)

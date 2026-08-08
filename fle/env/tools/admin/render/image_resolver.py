@@ -50,6 +50,20 @@ class ImageResolver:
         profiler.increment_counter("image_cache_misses")
         path = self.images_dir / f"{filename}.png"
         if not path.exists():
+            # non-directional entities (furnaces, chests) ship a single base
+            # sprite; fall back from "name_direction[_shadow]" to the base
+            for suffix in ("_north", "_south", "_east", "_west"):
+                if suffix in filename:
+                    base = filename.replace(suffix, "")
+                    base_path = self.images_dir / f"{base}.png"
+                    if base_path.exists():
+                        path = base_path
+                        break
+            else:
+                self.cache[filename] = None
+                profiler.increment_counter("image_not_found")
+                return None
+        if not path.exists():
             self.cache[filename] = None
             profiler.increment_counter("image_not_found")
             return None
