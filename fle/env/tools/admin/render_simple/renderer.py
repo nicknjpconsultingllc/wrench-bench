@@ -172,12 +172,16 @@ class Renderer:
             ):
                 filtered_entities.append(entity)
 
-                # Track entity status if the status indicator is enabled
+                # Track entity status if the status indicator is enabled.
+                # Not every entity model carries a status (e.g. ItemOnGround,
+                # the minimal ground-item representation from the #379 fix).
+                entity_status = getattr(entity, "status", None)
                 if (
                     self.config.style["status_indicator_enabled"]
-                    and entity.status != EntityStatus.NORMAL
+                    and entity_status is not None
+                    and entity_status != EntityStatus.NORMAL
                 ):
-                    statuses_present.add(entity.status)
+                    statuses_present.add(entity_status)
 
         # Update the entity list
         entities = filtered_entities

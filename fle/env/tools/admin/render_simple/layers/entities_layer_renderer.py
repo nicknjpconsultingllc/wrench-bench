@@ -75,10 +75,10 @@ class EntitiesLayerRenderer(LayerRenderer):
             # Add status indicator in corner if enabled
             if (
                 self.config.style["status_indicator_enabled"]
-                and entity.status != EntityStatus.NORMAL
+                and getattr(entity, "status", None) not in (None, EntityStatus.NORMAL)
             ):
                 self.shape_renderer.draw_status_indicator(
-                    draw, x1, y1, x2, y2, entity.status
+                    draw, x1, y1, x2, y2, entity.status  # guarded above
                 )
 
             # Add direction indicator if enabled

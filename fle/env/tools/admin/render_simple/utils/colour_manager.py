@@ -98,12 +98,15 @@ class ColourManager:
 
         base_color = self.entity_colors[entity.name]
 
+        # Some entity models (e.g. ItemOnGround) carry no status
+        entity_status = getattr(entity, "status", None)
+
         # For working entities, slightly brighten the color
-        if entity.status == EntityStatus.WORKING:
+        if entity_status == EntityStatus.WORKING:
             return tuple(min(c + 30, 255) for c in base_color)
 
         # For problem entities, slightly dim the color
-        if entity.status in [
+        if entity_status in [
             EntityStatus.NO_POWER,
             EntityStatus.LOW_POWER,
             EntityStatus.NO_FUEL,
