@@ -21,6 +21,7 @@ IRON_PLATE_SENTINEL = "iron_plate_sentinel"
 IRON_GEAR_SENTINEL = "iron_gear_sentinel"
 COPPER_CABLE_SENTINEL = "copper_cable_sentinel"
 IRON_PLATE_OBSERVABILITY_SENTINEL = "iron_plate_observability_sentinel"
+IRON_PLATE_ADAPTIVE_SENTINEL = "iron_plate_adaptive_sentinel"
 
 # Appended to every sentinel goal description. Categories of trouble are fair
 # game; schedules and seeds are NEVER disclosed.
@@ -190,11 +191,34 @@ iron_plate_observability_sentinel = DisruptionTaskConfig(
 )
 
 
+iron_plate_adaptive_sentinel = DisruptionTaskConfig(
+    goal_description=(
+        "Create an automatic iron-plate factory that produces 16 iron-plate "
+        f"per 60 ingame seconds. {DISRUPTION_NOTICE}"
+    ),
+    throughput_entity=Prototype.IronPlate,
+    quota=16,
+    task_key=IRON_PLATE_ADAPTIVE_SENTINEL,
+    disruptions=[
+        # Adaptive targeting: the engine analyzes the live electric-pole
+        # network and strikes whichever pole feeds the most machines, rather
+        # than picking a filtered entity by seeded index. A well-designed
+        # power layout (no single pole feeding multiple machines) forces the
+        # engine to settle for a single-consumer pole -- no worse than
+        # entity_destruction; a fragile layout (one pole feeding everything)
+        # gets punished harder. Same seed -> same tie-break, same victim on
+        # an identical build.
+        DisruptionSpec(kind=DisruptionKind.ADAPTIVE_STRIKE, seed=29),
+    ],
+)
+
+
 DISRUPTION_TASKS = {
     IRON_PLATE_SENTINEL: iron_plate_sentinel,
     IRON_GEAR_SENTINEL: iron_gear_sentinel,
     COPPER_CABLE_SENTINEL: copper_cable_sentinel,
     IRON_PLATE_OBSERVABILITY_SENTINEL: iron_plate_observability_sentinel,
+    IRON_PLATE_ADAPTIVE_SENTINEL: iron_plate_adaptive_sentinel,
 }
 
 

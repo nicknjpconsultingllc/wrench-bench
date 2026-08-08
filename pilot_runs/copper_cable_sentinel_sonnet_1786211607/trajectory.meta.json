@@ -1,0 +1,21 @@
+{
+  "task": "copper_cable_sentinel",
+  "model": "sonnet",
+  "steps": 32,
+  "fires": 1,
+  "fire_0": {
+    "kind": "entity_destruction",
+    "tick": 112422,
+    "baseline": 20.18502943650126,
+    "TR": 1.5,
+    "recovered": true
+  },
+  "detection": {
+    "latencies": [
+      38327
+    ],
+    "precision": 0.5,
+    "precision_strict": 0.5,
+    "recall": 1.0
+  }
+}

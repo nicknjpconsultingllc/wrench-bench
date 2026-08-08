@@ -19,6 +19,11 @@ class DisruptionKind(str, Enum):
     ENTITY_DESTRUCTION = "entity_destruction"
     BELT_CUT = "belt_cut"
     RESOURCE_EXHAUSTION = "resource_exhaustion"
+    # Adaptive targeting: analyzes the live build (electric-pole network
+    # load) instead of picking from a filtered list by seeded index. Held to
+    # the same floor acceptance test; see server.lua KINDS.adaptive_strike
+    # for the heuristic and its rationale.
+    ADAPTIVE_STRIKE = "adaptive_strike"
     # later families (not v1): power_loss self-heals, biter_raid is only
     # statistically deterministic.
     POWER_LOSS = "power_loss"

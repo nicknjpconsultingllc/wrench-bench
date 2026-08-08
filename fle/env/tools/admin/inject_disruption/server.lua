@@ -100,6 +100,59 @@ KINDS.resource_exhaustion = function(spec)
                tiles_changed = #tiles, resource = resource } }
 end
 
+-- adaptive_strike: targets the electric pole whose removal cuts power to the
+-- most machines at once, instead of a blind seeded pick over a filtered
+-- entity list. Heuristic ("power-network load"): assign every powered
+-- consumer (assembling machine / furnace / mining drill with a non-nil
+-- electric_network_id) to its nearest pole *within its own electric
+-- network*, then strike the pole with the highest assigned count. This is
+-- the simplest legible proxy for "single point of failure" -- a full
+-- graph-cut (articulation points over the pole adjacency graph) would catch
+-- bridge poles whose own directly-fed count is low but that split the
+-- network into isolated islands; that's a documented future refinement, not
+-- built here. The seed only breaks ties between equally-loaded poles, so
+-- the same build always yields the same victim.
+KINDS.adaptive_strike = function(spec)
+    local poles = sorted_entities({ force = "player", type = "electric-pole" })
+    if #poles == 0 then return nil, "no electric poles", true end
+    local consumers = game.surfaces[1].find_entities_filtered({
+        force = "player",
+        type = { "assembling-machine", "furnace", "mining-drill" },
+    })
+    local score = {}
+    for _, p in pairs(poles) do score[p.unit_number] = 0 end
+    local any_consumer = false
+    for _, c in pairs(consumers) do
+        if c.electric_network_id then
+            any_consumer = true
+            local best, bestd = nil, math.huge
+            for _, p in pairs(poles) do
+                if p.electric_network_id == c.electric_network_id then
+                    local dx = p.position.x - c.position.x
+                    local dy = p.position.y - c.position.y
+                    local d = dx * dx + dy * dy
+                    if d < bestd then best, bestd = p, d end
+                end
+            end
+            if best then score[best.unit_number] = score[best.unit_number] + 1 end
+        end
+    end
+    if not any_consumer then return nil, "no powered consumers", true end
+    local max_score = 0
+    for _, s in pairs(score) do if s > max_score then max_score = s end end
+    if max_score <= 0 then return nil, "no pole feeds a consumer", true end
+    local candidates = {}
+    for _, p in pairs(poles) do
+        if score[p.unit_number] == max_score then table.insert(candidates, p) end
+    end
+    local idx = seeded_index(spec.seed, #candidates)
+    local target = candidates[idx]
+    local m = manifest_entry(target)
+    m.consumers_disconnected = max_score
+    target.die()
+    return { m }
+end
+
 -- trailing production rate in items/min, from the sample ring buffer.
 -- min_tick: ignore samples older than this (chained specs measure only
 -- post-predecessor production -- windows straddling the previous fire would

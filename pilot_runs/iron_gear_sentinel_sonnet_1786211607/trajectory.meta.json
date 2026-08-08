@@ -1,0 +1,29 @@
+{
+  "task": "iron_gear_sentinel",
+  "model": "sonnet",
+  "steps": 32,
+  "fires": 2,
+  "fire_0": {
+    "kind": "entity_destruction",
+    "tick": 9620937,
+    "baseline": 18.166526492851137,
+    "TR": 0.41820815793185884,
+    "recovered": true
+  },
+  "fire_1": {
+    "kind": "belt_cut",
+    "tick": 9628153,
+    "baseline": 0.0,
+    "TR": null,
+    "recovered": null
+  },
+  "detection": {
+    "latencies": [
+      100888,
+      153250
+    ],
+    "precision": 0.6666666666666666,
+    "precision_strict": 0.3333333333333333,
+    "recall": 1.0
+  }
+}
