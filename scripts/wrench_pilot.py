@@ -92,6 +92,10 @@ def main():
     observation = "The map is empty. Begin."
     session_id = None
     start_tick = game_tick(inst)
+    # drain samples incrementally: the engine's ring buffer (2000 x 41 ticks
+    # ~= 82k ticks) evicts early-episode history long before a 600k-tick
+    # episode ends, which nulls the frozen baseline in post-hoc scoring
+    all_samples: list[dict] = []
 
     for step in range(steps):
         prompt = system + f"\n\n# Observation (step {step})\n{observation}" if step == 0 else (
@@ -107,6 +111,10 @@ def main():
         task_response = task.verify(score, inst, {})
         observation = task.enhance_response_with_task_output(str(response), task_response)
         tick = game_tick(inst)
+        new_samples = engine.samples(
+            since_tick=all_samples[-1]["tick"] if all_samples else 0
+        )
+        all_samples.extend(new_samples)
         writer.append_step(step, code, observation, tick, {})
         tp = task_response.meta.get(task.throughput_key, 0)
         print(f"[step {step}] tick={tick - start_tick} throughput={tp} success={task_response.success}")
@@ -114,7 +122,9 @@ def main():
             print("quota met")
 
     # --- post-hoc scoring -------------------------------------------------
-    samples = engine.samples()
+    final = engine.samples(since_tick=all_samples[-1]["tick"] if all_samples else 0)
+    samples = all_samples + final
+    (run_dir / "samples.json").write_text(json.dumps(samples))
     ledger = task.ledger.read()
     fires = [e for e in ledger if e.event == "fired"]
     # the engine's tracked key is authoritative (str vs Prototype-safe)
