@@ -59,7 +59,9 @@ class ComposeGenerator:
     """Compose YAML generator with centralized path handling."""
 
     rcon_password = RCON_PASSWORD
-    image = "factoriotools/factorio:2.0.73"
+    # Pinned by index digest (multi-arch: amd64 + arm64) so upstream tag churn
+    # can't change what we benchmark against.
+    image = "factoriotools/factorio:2.0.73@sha256:6471fbfb7eab3abf55bb53fed632606ecf17bf930891bccddff724afab9ed94c"
     map_gen_seed = 44340
     internal_rcon_port = 27015
     internal_game_port = 34197
