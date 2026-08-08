@@ -383,33 +383,80 @@ local function on_tick(event)
                     local position = entity.position
                     local entity_key = entity.name .. "_" .. position.x .. "_" .. position.y
                     local name = '"'..entity.name:gsub(" ", "_")..'"'
-                    if not storage.alerts[entity_key] then
+                    local alert = storage.alerts[entity_key]
+                    if not alert then
                         storage.alerts[entity_key] = {
                             position = position,
                             issues = issues,
                             entity_name = name,
-                            tick = event.tick
+                            entity = entity,
+                            first_tick = event.tick,
+                            tick = event.tick -- last tick at which the issue was observed
                         }
+                    else
+                        -- Refresh existing alert: keep first_tick, update the
+                        -- issue list, last-seen tick and entity reference.
+                        alert.issues = issues
+                        alert.tick = event.tick
+                        alert.entity = entity
                     end
                 end
+            end
+        end
+        -- Invalidate alerts whose underlying issue no longer exists: any
+        -- alert not refreshed by the scan above (entity repaired, removed,
+        -- or moved) is stale and gets dropped.
+        for key, alert in pairs(storage.alerts) do
+            if event.tick - alert.tick >= 60 then
+                storage.alerts[key] = nil
             end
         end
     end
 end
 
--- Define a function to get alerts older than the number of seconds
+-- Return CURRENT alerts, i.e. alerts whose issue was observed within the
+-- last `seconds` seconds.  Reads are NON-destructive, and each alert is
+-- re-validated against the live entity before being returned, so repaired
+-- issues disappear immediately instead of lingering.
 storage.get_alerts = function(seconds)
     local current_tick = game.tick
-    local old_alerts = {}
+    local current_alerts = {}
 
     for key, alert in pairs(storage.alerts) do
-        if current_tick - alert.tick > 60*seconds then
-            table.insert(old_alerts, alert)
-            storage.alerts[key] = nil
+        local include = (current_tick - alert.tick) <= 60 * seconds
+
+        if include and alert.entity ~= nil then
+            -- Re-check the underlying issue on read.
+            if not alert.entity.valid then
+                include = false
+                storage.alerts[key] = nil
+            else
+                local ok, issues = pcall(storage.utils.get_issues, alert.entity)
+                if ok then
+                    if #issues == 0 then
+                        -- Issue has been repaired since the last scan.
+                        include = false
+                        storage.alerts[key] = nil
+                    else
+                        alert.issues = issues
+                    end
+                end
+            end
+        end
+
+        if include then
+            -- Return a copy without the LuaEntity reference so that the
+            -- serialization to Python stays plain-data only.
+            table.insert(current_alerts, {
+                position = alert.position,
+                issues = alert.issues,
+                entity_name = alert.entity_name,
+                tick = alert.tick
+            })
         end
     end
 
-    return old_alerts
+    return current_alerts
 end
 
 -- Register the on_tick function to the on_tick event
