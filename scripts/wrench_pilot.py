@@ -174,6 +174,7 @@ def main():
             "-vf",
             "scale=1024:1024:force_original_aspect_ratio=decrease,"
             "pad=1024:1024:(ow-iw)/2:(oh-ih)/2:color=0x1f1f1f,format=yuv420p",
+            "-movflags", "+faststart",  # moov up front so browsers can stream
             str(out_mp4),
         ]
         try:

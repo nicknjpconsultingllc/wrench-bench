@@ -9,19 +9,20 @@ import { RunHeader } from "./components/RunHeader";
 import { ProductionChart } from "./components/ProductionChart";
 import { StepTimeline } from "./components/StepTimeline";
 import { StepDetail } from "./components/StepDetail";
+import { Timelapse } from "./components/Timelapse";
 
 type LoadState =
   | { kind: "idle"; error: string | null }
   | { kind: "loading" }
-  | { kind: "loaded"; run: RunData };
+  | { kind: "loaded"; run: RunData; timelapseUrl: string | null };
 
 export default function App() {
   const [state, setState] = useState<LoadState>({ kind: "idle", error: null });
 
-  const load = (promise: Promise<RunData>) => {
+  const load = (promise: Promise<RunData>, timelapseUrl: string | null = null) => {
     setState({ kind: "loading" });
     promise
-      .then((run) => setState({ kind: "loaded", run }))
+      .then((run) => setState({ kind: "loaded", run, timelapseUrl }))
       .catch((err: unknown) =>
         setState({
           kind: "idle",
@@ -35,14 +36,14 @@ export default function App() {
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get("run");
     const runPath = raw?.replace(/[.,/\s]+$/, "");
-    if (runPath) load(fetchRun(runPath));
+    if (runPath) load(fetchRun(runPath), `${runPath}/timelapse.mp4`);
   }, []);
 
   const pickRun = (dir: string) => {
     const url = new URL(window.location.href);
     url.searchParams.set("run", `runs/${dir}`);
     window.history.replaceState(null, "", url);
-    load(fetchRun(`runs/${dir}`));
+    load(fetchRun(`runs/${dir}`), `runs/${dir}/timelapse.mp4`);
   };
 
   return (
@@ -71,7 +72,7 @@ export default function App() {
       </header>
 
       {state.kind === "loaded" ? (
-        <RunView key={state.run.name} run={state.run} />
+        <RunView key={state.run.name} run={state.run} timelapseUrl={state.timelapseUrl} />
       ) : (
         <main className="landing">
           <p className="landing-blurb">
@@ -82,7 +83,13 @@ export default function App() {
           </p>
           <RunIndex onPick={pickRun} />
           <DropZone
-            onFiles={(files, dirName) => load(runFromFiles(files, dirName))}
+            onFiles={(files, dirName) => {
+              const mp4 = files.find((f) => f.name === "timelapse.mp4");
+              load(
+                runFromFiles(files, dirName),
+                mp4 ? URL.createObjectURL(mp4) : null,
+              );
+            }}
             error={state.kind === "idle" ? state.error : null}
             loading={state.kind === "loading"}
           />
@@ -92,7 +99,13 @@ export default function App() {
   );
 }
 
-function RunView({ run }: { run: RunData }) {
+function RunView({
+  run,
+  timelapseUrl,
+}: {
+  run: RunData;
+  timelapseUrl: string | null;
+}) {
   const derivation = useMemo(() => deriveRates(run), [run]);
   const annotations = useMemo(
     () => annotateSteps(run.trajectory, run.ledger),
@@ -115,6 +128,7 @@ function RunView({ run }: { run: RunData }) {
   return (
     <main>
       <RunHeader run={run} />
+      {timelapseUrl && <Timelapse url={timelapseUrl} />}
       <ProductionChart
         derivation={derivation}
         selectedItem={selectedItem}

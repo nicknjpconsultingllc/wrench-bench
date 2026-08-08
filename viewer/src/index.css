@@ -763,3 +763,11 @@ tbody tr:last-child td {
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
+
+.timelapse-video {
+  width: 100%;
+  max-height: 560px;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+}
