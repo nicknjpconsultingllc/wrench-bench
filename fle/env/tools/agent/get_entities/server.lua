@@ -60,5 +60,41 @@ storage.actions.get_entities = function(player_index, radius, entity_names_json,
         end)
         -- Silently continue on any error - don't let one bad entity break the whole call
     end
+
+    -- Issue #379: items dropped on the ground are "item-on-ground" entities
+    -- belonging to the NEUTRAL force, so the force-filtered query above can
+    -- never see them, even though they block entity placement.  Include them
+    -- with a minimal plain-data representation (name/position/item/count)
+    -- rather than the full serialize_entity, which assumes machine-like
+    -- entities (health, inventories, status).
+    local include_ground_items = true
+    if entity_names and #entity_names > 0 then
+        include_ground_items = false
+        for _, requested_name in ipairs(entity_names) do
+            if requested_name == "item-on-ground" then
+                include_ground_items = true
+                break
+            end
+        end
+    end
+
+    if include_ground_items then
+        local ground_items = player.surface.find_entities_filtered{area = area, type = "item-entity"}
+        for _, item_entity in ipairs(ground_items) do
+            pcall(function()
+                if item_entity.valid and item_entity.stack and item_entity.stack.valid_for_read then
+                    table.insert(result, {
+                        name = "\"item-on-ground\"",
+                        type = "\"item-entity\"",
+                        force = "\"neutral\"",
+                        position = {x = item_entity.position.x, y = item_entity.position.y},
+                        item = "\""..item_entity.stack.name.."\"",
+                        count = item_entity.stack.count
+                    })
+                end
+            end)
+        end
+    end
+
     return dump(result)
 end

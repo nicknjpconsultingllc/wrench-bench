@@ -151,6 +151,11 @@ class Prototype(enum.Enum, metaclass=PrototypeMetaclass):
     IronGearWheel = "iron-gear-wheel", ent.Entity
     StorageTank = "storage-tank", ent.StorageTank
 
+    # An item stack dropped on the ground (neutral force). Not placeable or
+    # craftable; returned by get_entities() so agents can see what is
+    # physically blocking placement (issue #379).
+    ItemOnGround = "item-on-ground", ent.ItemOnGround
+
     SmallElectricPole = "small-electric-pole", ent.ElectricityPole
     MediumElectricPole = "medium-electric-pole", ent.ElectricityPole
     BigElectricPole = "big-electric-pole", ent.ElectricityPole

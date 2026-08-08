@@ -896,6 +896,30 @@ class Chest(Entity):
     _width: float = 1
 
 
+class ItemOnGround(EntityCore):
+    """An item stack lying on the ground (an engine "item-on-ground" entity,
+    neutral force). Ground items block entity placement, so they are surfaced
+    by get_entities() even though they are not player-force machines.
+
+    This is a deliberately minimal representation (issue #379): ground items
+    have none of the machine attributes (energy, health, inventories) that the
+    full Entity model requires, so only name/position plus the item stack are
+    reported."""
+
+    item: Optional[str] = None
+    count: int = 1
+    force: Optional[str] = "neutral"
+
+    def __repr__(self) -> str:
+        return (
+            f"ItemOnGround(item='{self.item}', count={self.count}, "
+            f"position=Position({self.position}))"
+        )
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
 class StorageTank(FluidHandler):
     """A tank for storing fluids.
     Can be used for inputs and outputs of chemical plants and refineries.
