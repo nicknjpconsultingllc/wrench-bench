@@ -84,3 +84,7 @@ cortex
 CLAUDE.md
 /server/CLAUDE.md
 configs
+# WRENCH trajectory viewer (viewer/)
+viewer/node_modules/
+viewer/dist/
+viewer/public/runs/
