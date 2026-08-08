@@ -180,6 +180,9 @@ function asDetection(v: unknown, ctx: string): DetectionSummary {
   return {
     latencies: rawLatencies.map((n, i) => asNumber(n, `${ctx}.latencies[${i}]`)),
     precision: asNumber(o.precision, `${ctx}.precision`),
+    ...(o.precision_strict !== undefined && {
+      precision_strict: asNumber(o.precision_strict, `${ctx}.precision_strict`),
+    }),
     recall: asNumber(o.recall, `${ctx}.recall`),
   };
 }

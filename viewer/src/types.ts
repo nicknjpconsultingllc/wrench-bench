@@ -78,6 +78,9 @@ export interface DetectionSummary {
   /** Ticks from each fire to the agent's report_fault. */
   latencies: number[];
   precision: number;
+  /** Strict 3-tile match radius — the headline precision (absent in
+   * runs recorded before it existed). */
+  precision_strict?: number;
   recall: number;
 }
 

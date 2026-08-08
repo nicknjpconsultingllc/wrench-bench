@@ -25,8 +25,18 @@ export function RunHeader({ run }: { run: RunData }) {
     { label: "Steps", value: String(steps) },
     { label: "Fires", value: String(fires) },
     {
-      label: "Detection precision",
-      value: detection ? fmtPct(detection.precision) : "—",
+      // strict (3-tile) is the headline; loose radius shown on hover
+      label:
+        detection?.precision_strict !== undefined
+          ? "Detection precision (strict)"
+          : "Detection precision",
+      value: detection
+        ? fmtPct(detection.precision_strict ?? detection.precision)
+        : "—",
+      title:
+        detection?.precision_strict !== undefined
+          ? `loose 10-tile radius: ${fmtPct(detection.precision)}`
+          : undefined,
     },
     {
       label: "Detection recall",
