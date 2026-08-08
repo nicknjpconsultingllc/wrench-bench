@@ -709,3 +709,57 @@ tbody tr:last-child td {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* --- run index (landing page) --- */
+.run-index {
+  margin: 0 0 24px;
+}
+.run-index-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+.run-index-sub {
+  color: var(--text-dim, #8a8f98);
+  font-size: 12.5px;
+  margin: 0 0 10px;
+}
+.run-index-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.run-index-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: 1px solid var(--border, #2a2d33);
+  border-radius: 8px;
+  background: var(--surface, #17181c);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.run-index-row:hover {
+  border-color: var(--accent, #5b8def);
+}
+.run-index-task {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.run-index-meta {
+  color: var(--text-dim, #8a8f98);
+  font-size: 12.5px;
+  flex: 1;
+}
+.run-index-date {
+  color: var(--text-dim, #8a8f98);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}

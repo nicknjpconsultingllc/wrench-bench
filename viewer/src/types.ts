@@ -25,6 +25,9 @@ export const LEDGER_EVENT_NAMES = [
   "armed",
   "fired",
   "failed",
+  // the agent's factory design made the kind inapplicable (e.g. belt_cut
+  // on a beltless build) — its own outcome category, not a failure
+  "not_applicable",
   "report_fault",
 ] as const;
 

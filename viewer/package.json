@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "smoke": "tsx scripts/smoke-test.ts"
+    "smoke": "tsx scripts/smoke-test.ts",
+    "sync-runs": "node scripts/sync-runs.mjs",
+    "predev": "node scripts/sync-runs.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

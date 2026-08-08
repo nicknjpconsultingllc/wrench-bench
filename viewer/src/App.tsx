@@ -4,6 +4,7 @@ import { deriveRates } from "./lib/rates";
 import { annotateSteps } from "./lib/run";
 import { fetchRun, runFromFiles } from "./lib/loader";
 import { DropZone } from "./components/DropZone";
+import { RunIndex } from "./components/RunIndex";
 import { RunHeader } from "./components/RunHeader";
 import { ProductionChart } from "./components/ProductionChart";
 import { StepTimeline } from "./components/StepTimeline";
@@ -29,11 +30,20 @@ export default function App() {
       );
   };
 
-  // Dev convenience: ?run=runs/<run_dir> fetches files served next to the app.
+  // ?run=runs/<run_dir> fetches files served next to the app. Trailing
+  // punctuation is stripped: URLs pasted from prose often pick up a period.
   useEffect(() => {
-    const runPath = new URLSearchParams(window.location.search).get("run");
+    const raw = new URLSearchParams(window.location.search).get("run");
+    const runPath = raw?.replace(/[.,/\s]+$/, "");
     if (runPath) load(fetchRun(runPath));
   }, []);
+
+  const pickRun = (dir: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("run", `runs/${dir}`);
+    window.history.replaceState(null, "", url);
+    load(fetchRun(`runs/${dir}`));
+  };
 
   return (
     <div className="app">
@@ -47,7 +57,12 @@ export default function App() {
             <button
               type="button"
               className="ghost-button"
-              onClick={() => setState({ kind: "idle", error: null })}
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("run");
+                window.history.replaceState(null, "", url);
+                setState({ kind: "idle", error: null });
+              }}
             >
               Load another run
             </button>
@@ -65,6 +80,7 @@ export default function App() {
             harness sabotaged the factory, when the agent noticed, and what code it
             wrote at every step.
           </p>
+          <RunIndex onPick={pickRun} />
           <DropZone
             onFiles={(files, dirName) => load(runFromFiles(files, dirName))}
             error={state.kind === "idle" ? state.error : null}
