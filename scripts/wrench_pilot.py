@@ -67,6 +67,11 @@ def main():
     ap.add_argument("--steps", type=int, default=None, help="override trajectory length")
     ap.add_argument("--port", type=int, default=27000)
     ap.add_argument("--outdir", default="pilot_runs")
+    ap.add_argument(
+        "--no-render",
+        action="store_true",
+        help="skip per-step schematic frames + timelapse assembly",
+    )
     args = ap.parse_args()
 
     task = create_task(args.task)
@@ -116,6 +121,16 @@ def main():
         )
         all_samples.extend(new_samples)
         writer.append_step(step, code, observation, tick, {})
+        if not args.no_render:
+            # rendering must never kill a run
+            try:
+                frames_dir = run_dir / "frames"
+                frames_dir.mkdir(exist_ok=True)
+                inst.controllers["render_simple"]().save(
+                    str(frames_dir / f"step_{step:03d}.png")
+                )
+            except Exception as exc:  # noqa: BLE001
+                print(f"[step {step}] frame render failed: {exc}")
         tp = task_response.meta.get(task.throughput_key, 0)
         print(f"[step {step}] tick={tick - start_tick} throughput={tp} success={task_response.success}")
         if task_response.success:
@@ -147,6 +162,26 @@ def main():
     summary["detection"] = detection_metrics(ledger, fires)
     writer.finalize(summary)
     print(json.dumps(summary, indent=2, default=str))
+
+    frames_dir = run_dir / "frames"
+    if not args.no_render and frames_dir.is_dir():
+        # frame extents grow with the factory: scale+pad to a fixed canvas
+        out_mp4 = run_dir / "timelapse.mp4"
+        cmd = [
+            "ffmpeg", "-y", "-loglevel", "error",
+            "-framerate", "2",
+            "-i", str(frames_dir / "step_%03d.png"),
+            "-vf",
+            "scale=1024:1024:force_original_aspect_ratio=decrease,"
+            "pad=1024:1024:(ow-iw)/2:(oh-ih)/2:color=0x1f1f1f,format=yuv420p",
+            str(out_mp4),
+        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, timeout=300)
+            print(f"timelapse: {out_mp4}")
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
+            print(f"timelapse assembly skipped: {exc}")
+
     inst.cleanup()
 
 
