@@ -315,6 +315,14 @@ Now begin working toward this objective step by step."""
             if vision_enabled:
                 logger.info("👁️  Vision mode enabled - rendering images after each step")
 
+            # WRENCH per-step trajectory capture; None (no-op) unless the
+            # WRENCH_TRAJECTORY_DIR env var is set.
+            from fle.disruptions.trajectory import TrajectoryWriter
+
+            wrench_writer = TrajectoryWriter.for_env(
+                f"{env_id}_run{run_idx}_{int(time.time())}"
+            )
+
             # Controlled trajectory execution - WE control the 64 steps
             production_scores = []
             automated_production_scores = []  # Excludes harvested/crafted (matches unbounded_solver)
@@ -471,6 +479,23 @@ Analyze the current state and write a Python program using the FLE API to progre
                         current_ticks = 0
                         ticks_cost = 0
                         game_ticks.append(0)
+
+                    if wrench_writer is not None:
+                        try:
+                            wrench_writer.append_step(
+                                step_index=step,
+                                code=program.code,
+                                response=str(program_output),
+                                game_tick=current_ticks,
+                                produced_counts={
+                                    f["type"]: f.get("rate", 0)
+                                    for f in (flow or {}).get("output", [])
+                                },
+                            )
+                        except Exception as wrench_err:
+                            logger.debug(
+                                f"WRENCH trajectory write failed: {wrench_err}"
+                            )
 
                     # Format elapsed time from ticks (60 ticks per second)
                     total_seconds = current_ticks // 60
@@ -657,6 +682,22 @@ Continue to step {step + 2}."""
             trajectory_data.scores = production_scores
             trajectory_data.automated_scores = automated_production_scores
             trajectory_data.ticks = game_ticks
+
+            if wrench_writer is not None:
+                try:
+                    wrench_writer.finalize(
+                        {
+                            "env_id": env_id,
+                            "model": model_name,
+                            "trajectory_length": trajectory_length,
+                            "steps_completed": len(step_results),
+                            "final_score": final_score,
+                            "final_automated_score": final_automated_score,
+                            "game_ticks": game_ticks,
+                        }
+                    )
+                except Exception as wrench_err:
+                    logger.debug(f"WRENCH trajectory finalize failed: {wrench_err}")
 
             # Set final model output with summary
             state.output = ModelOutput(

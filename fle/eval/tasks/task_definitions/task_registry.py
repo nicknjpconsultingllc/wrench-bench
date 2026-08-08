@@ -27,12 +27,17 @@ from fle.eval.tasks.task_definitions.multiagent.multiagent_tasks import (
     MULTIAGENT_TASKS,
     list_multiagent_tasks,
 )
+from fle.eval.tasks.task_definitions.disruption.sentinel_tasks import (
+    DISRUPTION_TASKS,
+    list_disruption_tasks,
+)
 
 # Import task classes for type mapping
 from fle.eval.tasks import (
     ThroughputTask,
     UnboundedThroughputTask,
     DefaultTask,
+    DisruptionRecoveryTask,
     TaskABC,
 )
 
@@ -54,6 +59,9 @@ class TaskRegistry:
         # Add multiagent tasks
         self._all_tasks.update(MULTIAGENT_TASKS)
 
+        # Add WRENCH disruption-recovery tasks
+        self._all_tasks.update(DISRUPTION_TASKS)
+
         # Map task types to their implementation classes
         # Note: unbounded_production tasks are handled by Inspect solver/scorer directly,
         # not through the TaskABC class hierarchy. They use factorio_unbounded_solver
@@ -62,6 +70,7 @@ class TaskRegistry:
             "throughput": ThroughputTask,
             "unbounded_throughput": UnboundedThroughputTask,
             "default": DefaultTask,
+            "disruption_recovery": DisruptionRecoveryTask,
             # "unbounded_production" is handled by Inspect framework, not TaskABC
         }
 
@@ -128,6 +137,7 @@ class TaskRegistry:
             "throughput": list_throughput_tasks(),
             "unbounded": list_unbounded_tasks(),
             "multiagent": list_multiagent_tasks(),
+            "disruption": list_disruption_tasks(),
         }
 
     def get_task_info(self, task_key: str) -> Dict[str, Any]:
