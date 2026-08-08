@@ -32,6 +32,7 @@ from .default_task import DefaultTask
 from .throughput_task import ThroughputTask, LAB_PLAY_POPULATED_STARTING_INVENTORY
 from .unbounded_throughput_task import UnboundedThroughputTask
 from .disruption_task import DisruptionRecoveryTask
+from .scarcity_task import ScarcitySentinelTask, SCARCITY_STARTING_INVENTORY
 
 # Task creation utilities
 from .task_factory import TaskFactory
@@ -44,8 +45,10 @@ __all__ = [
     "ThroughputTask",
     "UnboundedThroughputTask",
     "DisruptionRecoveryTask",
+    "ScarcitySentinelTask",
     # Task creation utilities
     "TaskFactory",
     # Useful constants
     "LAB_PLAY_POPULATED_STARTING_INVENTORY",
+    "SCARCITY_STARTING_INVENTORY",
 ]
