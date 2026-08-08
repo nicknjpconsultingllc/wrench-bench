@@ -107,6 +107,20 @@ button {
   font-weight: 400;
 }
 
+.brand-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.brand-link:hover {
+  opacity: 0.8;
+}
+
 .topbar-right {
   display: flex;
   align-items: center;

@@ -46,25 +46,25 @@ export default function App() {
     load(fetchRun(`runs/${dir}`), `runs/${dir}/timelapse.mp4`);
   };
 
+  const goHome = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("run");
+    window.history.replaceState(null, "", url);
+    setState({ kind: "idle", error: null });
+  };
+
   return (
     <div className="app">
       <header className="topbar">
         <h1>
-          WRENCH <span className="topbar-sub">trajectory viewer</span>
+          <button type="button" className="brand-link" onClick={goHome}>
+            WRENCH <span className="topbar-sub">trajectory viewer</span>
+          </button>
         </h1>
         {state.kind === "loaded" && (
           <div className="topbar-right">
             <span className="run-name">{state.run.name}</span>
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.delete("run");
-                window.history.replaceState(null, "", url);
-                setState({ kind: "idle", error: null });
-              }}
-            >
+            <button type="button" className="ghost-button" onClick={goHome}>
               Load another run
             </button>
           </div>

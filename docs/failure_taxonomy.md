@@ -1,10 +1,10 @@
 # WRENCH Pilot Failure Taxonomy
 
-A qualitative taxonomy of agent failure modes and benchmark-validity findings from the first five WRENCH pilot runs (disruption-recovery tasks on Factorio, forked from FLE).
+A qualitative taxonomy of agent failure modes and benchmark-validity findings from WRENCH pilot runs (disruption-recovery tasks on Factorio, forked from FLE).
 
 ## 1. Method
 
-Data: five completed pilot runs (plus one Haiku run that crashed before step 0, leaving an empty trajectory), two models.
+Core data: five completed pilot runs (plus one Haiku run that crashed before step 0, leaving an empty trajectory), two models. §2.9 adds one supplementary run, collected after the V2 engine fix (recovery-chained arming), specifically because it surfaced a failure mode the original five did not.
 
 | Run (short name) | Directory | Model | Steps | Fires |
 |---|---|---|---|---|
@@ -13,6 +13,7 @@ Data: five completed pilot runs (plus one Haiku run that crashed before step 0, 
 | sonnet-B | `iron_plate_sentinel_sonnet_1786205506` | Sonnet | 32 | 1 |
 | gear | `iron_gear_sentinel_sonnet_1786211607` | Sonnet | 32 | 2 |
 | cable | `copper_cable_sentinel_sonnet_1786211607` | Sonnet | 32 | 1 |
+| gear2 (supplementary, §2.9) | `iron_gear_sentinel_sonnet_1786228879` | Sonnet | 32 | 2 |
 
 Each run was hand-read: the full `trajectory.jsonl` (per-step code + environment response) coded against the task ledger (`<task>.jsonl`: armed/fired/not_applicable/report_fault events with game ticks) as ground truth, plus `trajectory.meta.json` metrics and, where present, `samples.json` production counts. Citations below are (run, step N) for trajectory evidence and (run, tick T) for ledger events.
 
@@ -78,6 +79,19 @@ Across all Sonnet runs, burner-fuel logistics — not the disruption — was the
 
 Both iron-plate runs used a beltless gravity-feed design (drill drops directly into the furnace beneath: "Placed StoneFurnace 0 ... to catch ore from drill 0", sonnet-A, step 1), so belt_cut could not arm: ledger `failed`/`"no belts"` (sonnet-A tick 2797799; sonnet-B tick 5660911). The cable run built exactly one drill, which the first fire destroyed, making resource_exhaustion `not_applicable` `"no drills"` (cable, ledger tick 119638) — the sequential-contamination bug's second face (V2). The early-build reasoning shows no disruption-aware evasion: designs were chosen for simplicity and throughput redundancy ("2 parallel drill+furnace lines on the iron ore patch for redundancy", sonnet-B, step 1). Still, minimal builds shrink the disruption surface, so task generators must either guarantee each armed kind's precondition or score unarmable kinds explicitly.
 
+### F9. Endogenous failure crowds out detection of the real disruption (supplementary run: gear2)
+
+A sharper, single-incident version of F7, collected specifically to check how the agent behaves when a self-inflicted failure and an injected disruption collide in the same window — the V2 fix (recovery-chained arming) made this observable for the first time, since previously the second fire could land contaminated by the first before the agent had even noticed it.
+
+gear2 built a full steam power chain (offshore pump → boiler → steam engine → electric poles → electric drills/furnaces/assembler; steps 6–17) but hand-fed the boiler once (step 7: `insert_item(Prototype.Coal, boiler, quantity=50)`) and never built automated coal resupply. `entity_destruction` fired on the assembler at tick 10745075; independently, the boiler ran dry on its own — an endogenous failure, not an injected one. Both surfaced together at step 26 (tick 10809369):
+
+```python
+report_fault(Position(x=25.5, y=85.5), "assembling-machine-2 missing/destroyed - was working, now gone from entity query")
+report_fault(Position(x=-5.0, y=73.5), "boiler out of fuel - power network down, all downstream drills/furnaces/inserters lost power")
+```
+
+The assembler report is correct and matches the fire. But `belt_cut` had also fired (tick 10862417, three belts at x=19.5) and is never reported at all — the agent spent step 26 refueling the boiler instead. Final detection: recall 0.5 (1 of 2 fires reported), precision 1.0 on what it did report (gear2 meta). Both disruptions physically recovered (TR 0.26 and 1.5) — the failure is purely in situational awareness, not repair capability, and it is the inverse of F6's gear run: there, recovery failed and detection (partially) succeeded; here, recovery succeeded and detection partially failed. Together they suggest recovery and detection degrade somewhat independently under compounding load, which is the reason WRENCH scores them as separate axes (§3, V3) rather than folding them into one number.
+
 ## 3. Benchmark-validity observations
 
 Each meta-finding below was caught because a pilot run exhibited it; fix status as of this writing.
@@ -90,3 +104,5 @@ Each meta-finding below was caught because a pilot run exhibited it; fix status 
 ## 4. What differentiates models at pilot scale
 
 With N=5 nothing here is more than directional. The Haiku/Sonnet gap in this pilot is a capability floor, not a recovery gap: Haiku never produced a single plate in 8 steps (its second attempt; the first crashed pre-step-0), so no disruption ever armed and the sentinel machinery was never exercised — its meta precision/recall of 1.0 are vacuous (haiku meta, fires: 0). All four Sonnet runs built past quota and scored recall 1.0 on every fire, but with important variance underneath: one detection was genuine three times (via the NoneType-crash → area-scan → ghost pattern) and spurious once (sonnet-B, V3); precision ranged 0.5–0.9 loose and dropped to 0.33 strict in the gear run; and the only run that faced a second disruption died to it, with the belt ghost literally on screen at the final step. If this pattern holds at scale, the discriminating measurements are strict precision and second-disruption survival, not first-fire recall.
+
+The gear2 supplementary run (F9) sharpens this further: with sequential-fire contamination fixed, Sonnet recovered from *both* disruptions physically (TR 0.26 and 1.5) but only detected one (recall 0.5) — the opposite failure shape from the original gear run, where recovery failed but detection was intact. Two data points is not a trend, but it is consistent with recovery and detection being separable capabilities rather than one competence measured twice, which is the working assumption behind scoring them on independent axes.
