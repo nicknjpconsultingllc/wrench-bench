@@ -88,3 +88,4 @@ configs
 viewer/node_modules/
 viewer/dist/
 viewer/public/runs/
+.claude/worktrees/
