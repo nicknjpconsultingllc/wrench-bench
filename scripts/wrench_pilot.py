@@ -9,6 +9,7 @@ Usage:
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import time
@@ -40,7 +41,10 @@ def call_claude(prompt: str, model: str, session_id: str | None) -> tuple[str, s
     if session_id:
         cmd += ["--resume", session_id]
     cmd.append(prompt)
-    out = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    # FLE loads .env (placeholder API keys) into os.environ at import; an
+    # ANTHROPIC_API_KEY in the child env would override subscription auth
+    env = {k: v for k, v in os.environ.items() if not k.endswith("_API_KEY")}
+    out = subprocess.run(cmd, capture_output=True, text=True, timeout=600, env=env)
     if out.returncode != 0:
         raise RuntimeError(f"claude CLI failed: {out.stderr[:500]}")
     data = json.loads(out.stdout)
