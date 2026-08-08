@@ -11,29 +11,39 @@ storage.actions.production_stats = function(player)
     local item_stats = force.get_item_production_statistics(surface)
     local fluid_stats = force.get_fluid_production_statistics(surface)
 
-    local item_input_counts = item_stats.input_counts
-    local item_production_counts = item_stats.output_counts
-    local fluid_input_counts = fluid_stats.input_counts
-    local fluid_production_counts = fluid_stats.output_counts
+    -- Factorio's LuaFlowStatistics semantics (verified empirically against a
+    -- live 2.0.73 server, see audit/repro_prodstats_label_swap.py):
+    --   input_counts  = items PRODUCED (the "input" side of the statistics)
+    --   output_counts = items CONSUMED
+    -- FLE's convention everywhere downstream (profits.py, achievements.py,
+    -- observation_formatter.py) is:
+    --   "output" = produced, "input" = consumed
+    -- Map each engine counter straight to its FLE label.  (Historically this
+    -- function contained two inversions -- misnamed locals AND swapped return
+    -- keys -- that cancelled out; the external behavior here is unchanged.)
+    local item_produced_counts = item_stats.input_counts
+    local item_consumed_counts = item_stats.output_counts
+    local fluid_produced_counts = fluid_stats.input_counts
+    local fluid_consumed_counts = fluid_stats.output_counts
 
-    for name, count in pairs(item_input_counts) do
-        consumption_diff[name] = count
-    end
-
-    for name, count in pairs(item_production_counts) do
+    for name, count in pairs(item_produced_counts) do
         production_diff[name] = count
     end
 
-    for name, count in pairs(fluid_input_counts) do
+    for name, count in pairs(item_consumed_counts) do
         consumption_diff[name] = count
     end
 
-    for name, count in pairs(fluid_production_counts) do
+    for name, count in pairs(fluid_produced_counts) do
         production_diff[name] = count
+    end
+
+    for name, count in pairs(fluid_consumed_counts) do
+        consumption_diff[name] = count
     end
     return {
-        output = consumption_diff,
-        input = production_diff,
+        output = production_diff,   -- produced
+        input = consumption_diff,   -- consumed
         harvested = harvested_items,
         crafted = crafted_items
     }
