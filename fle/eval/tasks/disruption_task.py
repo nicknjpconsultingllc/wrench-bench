@@ -8,17 +8,25 @@ factory that is degraded at verification time cannot "wait out" the estimator.
 
 The agent is never told what was armed, when, or with what seed; every engine
 event is drained into the append-only ledger for post-hoc scoring instead.
+
+Optionally, a task can also cap agent-visible world-inspection calls (see
+``observability_budget=``) -- see fle/eval/tasks/observability_budget.py for
+the mechanism and design rationale.
 """
 
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from fle.agents import TaskResponse
 from fle.commons.constants import REWARD_OVERRIDE_KEY
 from fle.disruptions import DisruptionSpec, EventLedger, LedgerEntry
 from fle.env import FactorioInstance
 from fle.env.utils.achievements import eval_program_with_achievements
+from fle.eval.tasks.observability_budget import (
+    DEFAULT_METERED_TOOLS,
+    ObservabilityBudget,
+)
 from fle.eval.tasks.throughput_task import ThroughputTask
 
 # Keys the engine emits as first-class LedgerEntry fields; everything else
@@ -40,6 +48,8 @@ class DisruptionRecoveryTask(ThroughputTask):
         disruptions: Optional[List[DisruptionSpec]] = None,
         ledger_dir: Optional[str] = None,
         verify_windows: int = 2,
+        observability_budget: Optional[int] = None,
+        metered_tools: Iterable[str] = DEFAULT_METERED_TOOLS,
     ):
         super().__init__(
             trajectory_length,
@@ -57,6 +67,13 @@ class DisruptionRecoveryTask(ThroughputTask):
         # spec index -> engine-side disruption id, filled in setup_instance
         self.engine_ids: Dict[int, int] = {}
         self.ledger: Optional[EventLedger] = None
+        # None (default) = unmetered, matching the existing sentinel tasks.
+        # A finite value installs an ObservabilityBudget in setup_instance;
+        # see fle/eval/tasks/observability_budget.py for the soft-cap
+        # design rationale and which tools are metered.
+        self.observability_budget_n = observability_budget
+        self.metered_tools = tuple(metered_tools)
+        self.budget: Optional[ObservabilityBudget] = None
 
     def with_seed_offset(self, offset: int) -> "DisruptionRecoveryTask":
         """Shift every DisruptionSpec seed by ``offset``; returns self.
@@ -113,6 +130,17 @@ class DisruptionRecoveryTask(ThroughputTask):
             )
         self.ledger = EventLedger(ledger_path)
 
+        # Fresh ObservabilityBudget per episode -- resets the counter even
+        # if setup_instance is called more than once on the same live
+        # instance (ObservabilityBudget.install() also de-dupes hooks).
+        if self.observability_budget_n is not None:
+            self.budget = ObservabilityBudget(
+                self.observability_budget_n, metered_tools=self.metered_tools
+            )
+            self.budget.install(instance)
+        else:
+            self.budget = None
+
     def verify(
         self, score: float, instance: FactorioInstance, step_statistics: Dict
     ) -> TaskResponse:
@@ -129,13 +157,17 @@ class DisruptionRecoveryTask(ThroughputTask):
 
         drained = self._drain_events_to_ledger(instance)
 
+        meta = {
+            self.throughput_key: mean_throughput,
+            REWARD_OVERRIDE_KEY: mean_throughput,
+            "wrench_events_drained": drained,
+        }
+        if self.budget is not None:
+            meta.update(self.budget.summary())
+
         return TaskResponse(
             success=mean_throughput >= self.quota,
-            meta={
-                self.throughput_key: mean_throughput,
-                REWARD_OVERRIDE_KEY: mean_throughput,
-                "wrench_events_drained": drained,
-            },
+            meta=meta,
         )
 
     def _drain_events_to_ledger(self, instance: FactorioInstance) -> int:
@@ -166,5 +198,16 @@ class DisruptionRecoveryTask(ThroughputTask):
             )
         return len(events)
 
-    # enhance_response_with_task_output is deliberately inherited unchanged:
-    # the agent sees only the throughput report, never disruption info.
+    def enhance_response_with_task_output(
+        self, response: str, task_response: TaskResponse
+    ) -> str:
+        # The throughput report is still the only disruption-adjacent info
+        # ThroughputTask.enhance_response_with_task_output adds -- never the
+        # kind/seed/schedule of anything armed. The one thing appended here
+        # is the observability-budget status line (when metering is
+        # enabled), which is a standing, always-on mechanism rather than
+        # information about a specific disruption.
+        response = super().enhance_response_with_task_output(response, task_response)
+        if self.budget is not None:
+            response += f"\n{self.budget.status_line()}"
+        return response

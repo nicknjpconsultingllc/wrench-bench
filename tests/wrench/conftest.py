@@ -10,11 +10,15 @@ nothing is listening on localhost:27000, and can be deselected with
 `pytest -m "not wrench_live"`.
 """
 
+import os
 import socket
 
 import pytest
 
-WRENCH_RCON_PORT = 27000
+# Overridable so multiple concurrent worktrees/agents can each point their
+# `wrench_live` tests at their own Factorio container without editing this
+# file (mirrors tests/conftest.py's FACTORIO_RCON_PORT override).
+WRENCH_RCON_PORT = int(os.environ.get("WRENCH_RCON_PORT", 27000))
 
 # Enough materials to build the two-furnace fixture factory, plus spares for
 # the oracle agent's repairs.

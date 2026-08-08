@@ -329,3 +329,28 @@ def detection_metrics(
         "precision_strict": precision_strict,
         "recall": recall,
     }
+
+
+def observability_budget_metrics(meta: Dict) -> Optional[Dict]:
+    """Inspection-call budget usage from a task's final ``meta`` dict.
+
+    Reads the keys ``ObservabilityBudget.summary()`` writes into
+    ``TaskResponse.meta`` (see ``fle.eval.tasks.observability_budget`` for
+    the counting mechanism and which tools are metered). Returns ``None``
+    when the episode was not budgeted -- an unmetered task's meta simply
+    lacks these keys, which is the expected common case, not a broken
+    episode, so this does not follow the ratio-scorer "None means
+    degenerate" convention above; it means "not applicable."
+    """
+    used = meta.get("inspection_calls_used")
+    budget = meta.get("inspection_calls_budget")
+    if used is None or budget is None:
+        return None
+    over = meta.get("inspection_calls_over_budget", max(0, used - budget))
+    return {
+        "calls_used": used,
+        "calls_budget": budget,
+        "calls_over_budget": over,
+        "within_budget": used <= budget,
+        "utilization": (used / budget) if budget else None,
+    }

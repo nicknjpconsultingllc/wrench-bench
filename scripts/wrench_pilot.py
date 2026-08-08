@@ -18,6 +18,7 @@ from pathlib import Path
 from fle.disruptions.scoring import (
     detection_metrics,
     frozen_baseline,
+    observability_budget_metrics,
     recovery_at,
     throughput_retained,
 )
@@ -112,6 +113,7 @@ def main():
     # ~= 82k ticks) evicts early-episode history long before a 600k-tick
     # episode ends, which nulls the frozen baseline in post-hoc scoring
     all_samples: list[dict] = []
+    task_response = None  # last verify() result; carries observability-budget meta
 
     for step in range(steps):
         prompt = system + f"\n\n# Observation (step {step})\n{observation}" if step == 0 else (
@@ -174,6 +176,9 @@ def main():
             "recovered": recovery_at(samples, item, f.tick, horizon),
         }
     summary["detection"] = detection_metrics(ledger, fires)
+    # None on unbudgeted tasks (most sentinels) -- see fle/disruptions/scoring.py
+    if task_response is not None:
+        summary["observability"] = observability_budget_metrics(task_response.meta)
     writer.finalize(summary)
     print(json.dumps(summary, indent=2, default=str))
 

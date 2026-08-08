@@ -47,7 +47,7 @@ class TestUnit:
         from fle.eval.tasks.task_definitions.task_registry import create_task
 
         for key in ("iron_plate_sentinel", "iron_gear_sentinel",
-                    "copper_cable_sentinel"):
+                    "copper_cable_sentinel", "iron_plate_observability_sentinel"):
             task = create_task(key)
             assert isinstance(task, DisruptionRecoveryTask)
             assert len(task.disruptions) == 2
@@ -59,6 +59,22 @@ class TestUnit:
             assert "delay" not in goal
             for spec in task.disruptions:
                 assert str(spec.seed) not in goal.replace("16", "")
+
+    def test_observability_sentinel_carries_a_budget_the_others_do_not(self):
+        from fle.eval.tasks.task_definitions.task_registry import create_task
+
+        budgeted = create_task("iron_plate_observability_sentinel")
+        assert budgeted.observability_budget_n is not None
+        assert budgeted.observability_budget_n > 0
+        # The budget mechanism (how many calls, which tools) is fair game to
+        # disclose -- unlike disruption schedules/seeds -- since the agent
+        # must know the rule to play against it.
+        assert "inspection" in budgeted.goal_description.lower()
+        assert "metered" in budgeted.goal_description.lower()
+
+        for key in ("iron_plate_sentinel", "iron_gear_sentinel", "copper_cable_sentinel"):
+            unbudgeted = create_task(key)
+            assert unbudgeted.observability_budget_n is None
 
 
 @pytest.mark.wrench_live

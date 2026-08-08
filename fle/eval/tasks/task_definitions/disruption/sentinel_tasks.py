@@ -9,7 +9,7 @@ tools to use -- never the schedule, kinds-per-task, or seeds. Those live only
 here and in the ledger.
 """
 
-from typing import Any, Dict, List, Literal, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,7 @@ from fle.env.game_types import Prototype
 IRON_PLATE_SENTINEL = "iron_plate_sentinel"
 IRON_GEAR_SENTINEL = "iron_gear_sentinel"
 COPPER_CABLE_SENTINEL = "copper_cable_sentinel"
+IRON_PLATE_OBSERVABILITY_SENTINEL = "iron_plate_observability_sentinel"
 
 # Appended to every sentinel goal description. Categories of trouble are fair
 # game; schedules and seeds are NEVER disclosed.
@@ -27,6 +28,22 @@ DISRUPTION_NOTICE = (
     "Disruptions may damage or degrade your factory at any time. Watch for "
     "problems (get_alerts, production numbers, get_entities), report faults "
     "you find with report_fault, and repair to keep production going."
+)
+
+# Appended instead of DISRUPTION_NOTICE on budgeted tasks: same categories of
+# trouble, plus an explicit heads-up that a subset of inspection tools is
+# metered (get_alerts is not) -- calibrated so brute-force per-step
+# get_entities sweeps run out well before the episode ends, but periodic or
+# alert-triggered checks do not. See fle/eval/tasks/observability_budget.py.
+OBSERVABILITY_DISRUPTION_NOTICE = (
+    "Disruptions may damage or degrade your factory at any time. Watch for "
+    "problems (get_alerts, production numbers, get_entities), report faults "
+    "you find with report_fault, and repair to keep production going. "
+    "get_entity, get_entities, and inspect_inventory calls are metered: you "
+    "have a limited number for the whole episode (shown each step as "
+    "'Inspection calls remaining'). Calls beyond the budget still work but "
+    "count against you at scoring time, so prefer get_alerts (unmetered) "
+    "and targeted checks over wide or repeated polling."
 )
 
 
@@ -45,6 +62,9 @@ class DisruptionTaskConfig(BaseModel):
     goal_description: str
     task_key: str
     disruptions: List[DisruptionSpec] = Field(default_factory=list)
+    # None (default) = unmetered. Set to install an ObservabilityBudget; see
+    # fle/eval/tasks/observability_budget.py.
+    observability_budget: Optional[int] = None
 
     class Config:
         frozen = True
@@ -63,6 +83,7 @@ class DisruptionTaskConfig(BaseModel):
             "quota": self.quota,
             "goal_description": self.goal_description,
             "task_key": self.task_key,
+            "observability_budget": self.observability_budget,
             # Keep DisruptionSpec instances intact -- the task constructor
             # consumes them directly.
             "disruptions": list(self.disruptions),
@@ -134,10 +155,46 @@ copper_cable_sentinel = DisruptionTaskConfig(
 )
 
 
+# Same factory/disruptions as iron_plate_sentinel, but meters
+# get_entity/get_entities/inspect_inventory (see
+# fle/eval/tasks/observability_budget.py). Budget calibrated empirically: a
+# real Claude Sonnet pilot run against the live server (scripts/wrench_pilot,
+# 12 steps, this task) used 10 metered calls -- ~0.8/step -- for normal build
+# + status-check play, including get_entity calls that hit the classic
+# "NoneType, entity was destroyed" pattern from docs/failure_taxonomy.md F5.
+# Extrapolated to the full 32-step trajectory that is comfortably within 48
+# (~1.5x headroom) for disciplined play, while a "get_entities every step
+# regardless" habit (32+ calls on that pattern alone) would still burn
+# through it. Slightly generous by design for a v1 task -- see the
+# soft-cap rationale in observability_budget.py: an over-tight budget makes
+# the task unsolvable rather than measuring monitoring discipline.
+IRON_PLATE_OBSERVABILITY_BUDGET = 48
+
+iron_plate_observability_sentinel = DisruptionTaskConfig(
+    goal_description=(
+        "Create an automatic iron-plate factory that produces 16 iron-plate "
+        f"per 60 ingame seconds. {OBSERVABILITY_DISRUPTION_NOTICE}"
+    ),
+    throughput_entity=Prototype.IronPlate,
+    quota=16,
+    task_key=IRON_PLATE_OBSERVABILITY_SENTINEL,
+    observability_budget=IRON_PLATE_OBSERVABILITY_BUDGET,
+    disruptions=[
+        DisruptionSpec(kind=DisruptionKind.ENTITY_DESTRUCTION, seed=11),
+        DisruptionSpec(
+            kind=DisruptionKind.BELT_CUT,
+            seed=23,
+            params={"segments": 3},
+        ),
+    ],
+)
+
+
 DISRUPTION_TASKS = {
     IRON_PLATE_SENTINEL: iron_plate_sentinel,
     IRON_GEAR_SENTINEL: iron_gear_sentinel,
     COPPER_CABLE_SENTINEL: copper_cable_sentinel,
+    IRON_PLATE_OBSERVABILITY_SENTINEL: iron_plate_observability_sentinel,
 }
 
 
