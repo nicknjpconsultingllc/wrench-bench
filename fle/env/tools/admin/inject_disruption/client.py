@@ -33,27 +33,33 @@ class InjectDisruption(Tool):
         quota_item: str,
         quota_per_min: float,
         *,
-        quota_fraction: float = 0.5,
+        quota_fraction: float = 1.0,
         consecutive_windows: int = 2,
         window_ticks: int = 3600,
         delay_ticks: int = 0,
+        after_id: int | None = None,
         params: dict | None = None,
     ) -> int:
-        """Arm a disruption; returns its engine-side id."""
-        response = self(
-            "arm",
-            {
-                "kind": kind,
-                "seed": seed,
-                "params": params or {},
-                "quota_item": quota_item,
-                "quota_per_min": quota_per_min,
-                "quota_fraction": quota_fraction,
-                "consecutive_windows": consecutive_windows,
-                "window_ticks": window_ticks,
-                "delay_ticks": delay_ticks,
-            },
-        )
+        """Arm a disruption; returns its engine-side id.
+
+        ``after_id`` chains this spec behind another: it stays pending until
+        that spec resolves (fired / not_applicable / failed), then must see
+        its precondition met afresh before arming.
+        """
+        payload = {
+            "kind": kind,
+            "seed": seed,
+            "params": params or {},
+            "quota_item": quota_item,
+            "quota_per_min": quota_per_min,
+            "quota_fraction": quota_fraction,
+            "consecutive_windows": consecutive_windows,
+            "window_ticks": window_ticks,
+            "delay_ticks": delay_ticks,
+        }
+        if after_id is not None:
+            payload["after_id"] = after_id
+        response = self("arm", payload)
         return int(response["id"])
 
     def fire_now(self, disruption_id: int) -> None:

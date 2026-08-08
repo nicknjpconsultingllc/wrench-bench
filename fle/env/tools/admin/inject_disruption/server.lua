@@ -10,7 +10,7 @@ local SAMPLE_CAP = 2000
 
 local function wrench_state()
     if not storage.wrench then
-        storage.wrench = { armed = {}, events = {}, samples = {}, tracked = {}, next_id = 1 }
+        storage.wrench = { armed = {}, events = {}, samples = {}, tracked = {}, resolved = {}, next_id = 1 }
     end
     return storage.wrench
 end
@@ -100,13 +100,19 @@ KINDS.resource_exhaustion = function(spec)
                tiles_changed = #tiles, resource = resource } }
 end
 
--- trailing production rate in items/min, from the sample ring buffer
-local function trailing_rate(w, item, window_ticks)
+-- trailing production rate in items/min, from the sample ring buffer.
+-- min_tick: ignore samples older than this (chained specs measure only
+-- post-predecessor production -- windows straddling the previous fire would
+-- pass the re-prove check on stale pre-damage throughput)
+local function trailing_rate(w, item, window_ticks, min_tick)
+    min_tick = min_tick or 0
     local n = #w.samples
     if n < 2 then return nil end
     local newest = w.samples[n]
+    if newest.tick < min_tick then return nil end
     local base = nil
     for i = n - 1, 1, -1 do
+        if w.samples[i].tick < min_tick then break end
         if newest.tick - w.samples[i].tick >= window_ticks then
             base = w.samples[i]
             break
@@ -131,8 +137,19 @@ script.on_nth_tick(WRENCH_INTERVAL, function(ev)
         if #w.samples > SAMPLE_CAP then table.remove(w.samples, 1) end
     end
     for id, spec in pairs(w.armed) do
+        if spec.state == "pending" then
+            -- chained spec: waits for its predecessor to resolve, then must
+            -- see the precondition met AGAIN (streak restarts at zero) so a
+            -- later fire always hits a re-proven factory -- sequential fires
+            -- otherwise contaminate each other's baselines and targets
+            if w.resolved[spec.after_id] then
+                spec.state = "waiting"
+                spec.streak = 0
+                spec.eligible_tick = w.resolved[spec.after_id]
+            end
+        end
         if spec.state == "waiting" then
-            local rate = trailing_rate(w, spec.quota_item, spec.window_ticks)
+            local rate = trailing_rate(w, spec.quota_item, spec.window_ticks, spec.eligible_tick)
             if rate and rate >= spec.quota_per_min * spec.quota_fraction then
                 spec.streak = spec.streak + 1
             else
@@ -159,6 +176,7 @@ script.on_nth_tick(WRENCH_INTERVAL, function(ev)
                 push_event(w, { event = "failed", id = id, kind = spec.kind, error = err })
             end
             w.armed[id] = nil
+            w.resolved[id] = ev.tick
         end
     end
 end)
@@ -182,7 +200,8 @@ storage.actions.inject_disruption = function(player, command, payload)
             consecutive_windows = payload.consecutive_windows or 2,
             window_ticks = payload.window_ticks or 3600,
             delay_ticks = payload.delay_ticks or 0,
-            state = "waiting",
+            after_id = payload.after_id,
+            state = payload.after_id and "pending" or "waiting",
             streak = 0,
         }
         if payload.quota_item then

@@ -85,7 +85,12 @@ class DisruptionRecoveryTask(ThroughputTask):
         engine = instance.controllers["inject_disruption"]
         engine.reset_state()
         self.engine_ids = {}
+        previous_id: int | None = None
         for idx, spec in enumerate(self.disruptions):
+            # specs are chained in list order: each waits for the previous
+            # one to resolve, then re-proves the precondition, so every fire
+            # hits a working factory (multi-disruption tasks measure
+            # repeated recovery, and later baselines stay valid)
             engine_id = engine.arm(
                 kind=spec.kind.value,
                 seed=spec.seed,
@@ -94,9 +99,11 @@ class DisruptionRecoveryTask(ThroughputTask):
                 quota_fraction=spec.precondition.quota_fraction,
                 consecutive_windows=spec.precondition.consecutive_windows,
                 delay_ticks=spec.delay_ticks,
+                after_id=previous_id,
                 params=dict(spec.params),
             )
             self.engine_ids[idx] = engine_id
+            previous_id = engine_id
         if self.ledger_dir is not None:
             ledger_path = Path(self.ledger_dir) / f"{self.task_key}.jsonl"
         else:

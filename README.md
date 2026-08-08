@@ -45,6 +45,11 @@ injection conditions.
 - **Agents are warned in category, never in schedule.** Task prompts say
   disruptions may occur and name the kinds; seeds and timing never appear in
   any agent-visible channel.
+- **Sequential disruptions chain on recovery, not on timers.** A later
+  disruption stays pending until the previous one resolves, then must see
+  the full quota re-proven on strictly post-damage production before it can
+  arm — every fire hits a working factory, baselines stay valid, and
+  multi-disruption tasks measure *repeated* recovery.
 
 Disruption kinds are held to a **floor acceptance test**: with a no-op agent,
 post-injection throughput must fall to ≤0.2× baseline over the measurement

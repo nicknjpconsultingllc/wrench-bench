@@ -93,7 +93,6 @@ iron_plate_sentinel = DisruptionTaskConfig(
             kind=DisruptionKind.BELT_CUT,
             seed=23,
             params={"segments": 3},
-            delay_ticks=7200,
         ),
     ],
 )
@@ -112,7 +111,6 @@ iron_gear_sentinel = DisruptionTaskConfig(
             kind=DisruptionKind.BELT_CUT,
             seed=17,
             params={"segments": 3},
-            delay_ticks=7200,
         ),
     ],
 )
@@ -131,7 +129,6 @@ copper_cable_sentinel = DisruptionTaskConfig(
             kind=DisruptionKind.RESOURCE_EXHAUSTION,
             seed=13,
             params={"resource": "copper-ore", "remaining": 1},
-            delay_ticks=7200,
         ),
     ],
 )
