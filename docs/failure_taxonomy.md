@@ -4,7 +4,7 @@ A qualitative taxonomy of agent failure modes and benchmark-validity findings fr
 
 ## 1. Method
 
-Core data: five completed pilot runs (plus one Haiku run that crashed before step 0, leaving an empty trajectory), two models. §2.9 adds one supplementary run, collected after the V2 engine fix (recovery-chained arming), specifically because it surfaced a failure mode the original five did not.
+Core data: five completed pilot runs (plus one Haiku run that crashed before step 0, leaving an empty trajectory), two models. §2.9 adds one supplementary run, collected after the V2 engine fix (recovery-chained arming), specifically because it surfaced a failure mode the original five did not. §2.10 adds three calibration runs — one per newly-added task family (observability budget, adaptive targeting, scarcity) — collected to validate each family, not to extend the core sample.
 
 | Run (short name) | Directory | Model | Steps | Fires |
 |---|---|---|---|---|
@@ -14,6 +14,9 @@ Core data: five completed pilot runs (plus one Haiku run that crashed before ste
 | gear | `iron_gear_sentinel_sonnet_1786211607` | Sonnet | 32 | 2 |
 | cable | `copper_cable_sentinel_sonnet_1786211607` | Sonnet | 32 | 1 |
 | gear2 (supplementary, §2.9) | `iron_gear_sentinel_sonnet_1786228879` | Sonnet | 32 | 2 |
+| observability-cal (§2.10) | `iron_plate_observability_sentinel_sonnet_1786234523` | Sonnet | 32 | 1 |
+| adaptive-cal (§2.10) | `iron_plate_adaptive_sentinel_sonnet_1786234523` | Sonnet | 32 | 0 (1 armed → not_applicable) |
+| scarcity-cal (§2.10) | `iron_plate_scarcity_sentinel_sonnet_1786234523` | Sonnet | 48 | 2 |
 
 Each run was hand-read: the full `trajectory.jsonl` (per-step code + environment response) coded against the task ledger (`<task>.jsonl`: armed/fired/not_applicable/report_fault events with game ticks) as ground truth, plus `trajectory.meta.json` metrics and, where present, `samples.json` production counts. Citations below are (run, step N) for trajectory evidence and (run, tick T) for ledger events.
 
@@ -91,6 +94,18 @@ report_fault(Position(x=-5.0, y=73.5), "boiler out of fuel - power network down,
 ```
 
 The assembler report is correct and matches the fire. But `belt_cut` had also fired (tick 10862417, three belts at x=19.5) and is never reported at all — the agent spent step 26 refueling the boiler instead. Final detection: recall 0.5 (1 of 2 fires reported), precision 1.0 on what it did report (gear2 meta). Both disruptions physically recovered (TR 0.26 and 1.5) — the failure is purely in situational awareness, not repair capability, and it is the inverse of F6's gear run: there, recovery failed and detection (partially) succeeded; here, recovery succeeded and detection partially failed. Together they suggest recovery and detection degrade somewhat independently under compounding load, which is the reason WRENCH scores them as separate axes (§3, V3) rather than folding them into one number.
+
+### F10. Constant rebuild friction masks disruption under scarcity (scarcity-cal)
+
+scarcity-cal is the cleanest recovery in the whole dataset by throughput — both disruptions fully recovered (TR 1.33 on `entity_destruction`, 1.19 on `resource_exhaustion`) — and also the first run with **zero `report_fault` calls across 48 steps**, despite two real fires. The evidence it noticed is explicit: step 8 extracts the surviving plates from a furnace, then `pickup_entity(furnace)` followed by `print("Picked up dead drill: True")` (scarcity-cal, step 8) — the agent identified the drill as dead, salvaged what it could, and relocated to a fresh patch at `(25, 82)` the very next step, never once narrating it as a fault to report.
+
+Read against F6/F9's "rebuild-elsewhere, unknowingly" pattern, scarcity sharpens rather than introduces this failure mode: starting from nothing means the agent spends the whole run in a build → hit an error → adapt loop as a matter of course (three separate drill/furnace placements across steps 3–12 alone, each hitting its own friction — a `get_entities` keyword-argument `TypeError` at step 5, a bad `get_entity` call on the now-missing drill at step 7). Against that baseline, "the drill is dead" doesn't register as anomalous; it looks like the same category of routine setback as everything else in the run. A benchmark that wants detection to mean something under scarcity may need a signal that survives this — e.g. crediting detection implicitly when a `pickup_entity`/rebuild sequence targets a ledger-affected entity, not only explicit `report_fault` calls (a scoring change, not a task change).
+
+### F11. Design-avoidance can leave a task with no teeth (adaptive-cal)
+
+adaptive-cal built a textbook two-line burner-tier factory (drill → furnace, no belts, no electric anything — the same design pattern as sonnet-A/sonnet-B in F8) and cleared quota by step ~15. The engine did exactly what it should: `adaptive_strike` armed the moment quota was proven (tick 12698725) and immediately resolved `not_applicable` `"no electric poles"` in the same tick (ledger). This is the design-avoidance path (F8) working as specified, not a bug — the pilot script's summary JSON only counts `event == "fired"` toward `"fires"`, so it under-reports what happened; the full story is only visible in the raw ledger.
+
+The gap this exposes is real, though: **`iron_plate_adaptive_sentinel` currently has exactly one disruption in its list, and burner-tier is both the simplest and the most common solution to a 16/60s iron-plate quota** (every iron-plate run so far except gear2's power chain used it). Unlike `iron_plate_sentinel`, which chains `entity_destruction` (kind-agnostic, always applies) ahead of `belt_cut` (design-avoidable), the adaptive sentinel has no fallback — a burner-tier build gets zero disruption pressure for the entire episode. Fix queued: chain a kind-agnostic disruption (e.g. `entity_destruction`) either before or after `adaptive_strike` in the task's spec list, the same pattern already used elsewhere, so the task always tests *something* regardless of build style.
 
 ## 3. Benchmark-validity observations
 

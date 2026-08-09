@@ -217,6 +217,16 @@ iron_plate_adaptive_sentinel = DisruptionTaskConfig(
     quota=16,
     task_key=IRON_PLATE_ADAPTIVE_SENTINEL,
     disruptions=[
+        # Kind-agnostic fallback first (see docs/failure_taxonomy.md F11):
+        # a calibration run showed the straightforward burner-tier solution
+        # to this quota (drill -> furnace, no electric infrastructure at
+        # all) leaves adaptive_strike with nothing to target -- it correctly
+        # resolves not_applicable "no electric poles", but the task then
+        # tests nothing. entity_destruction always applies (any
+        # furnace/drill/assembler), so the task has teeth against every
+        # build style; chaining means it fires and recovers before
+        # adaptive_strike gets its turn.
+        DisruptionSpec(kind=DisruptionKind.ENTITY_DESTRUCTION, seed=37),
         # Adaptive targeting: the engine analyzes the live electric-pole
         # network and strikes whichever pole feeds the most machines, rather
         # than picking a filtered entity by seeded index. A well-designed
@@ -224,7 +234,9 @@ iron_plate_adaptive_sentinel = DisruptionTaskConfig(
         # engine to settle for a single-consumer pole -- no worse than
         # entity_destruction; a fragile layout (one pole feeding everything)
         # gets punished harder. Same seed -> same tie-break, same victim on
-        # an identical build.
+        # an identical build. Still not_applicable on a burner-only build --
+        # that outcome is itself informative (design-avoidance, F8) once the
+        # task is no longer relying on this as its only disruption.
         DisruptionSpec(kind=DisruptionKind.ADAPTIVE_STRIKE, seed=29),
     ],
 )

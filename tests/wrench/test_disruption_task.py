@@ -51,9 +51,10 @@ class TestUnit:
                     "iron_plate_adaptive_sentinel"):
             task = create_task(key)
             assert isinstance(task, DisruptionRecoveryTask)
-            assert len(task.disruptions) == (
-                1 if key == "iron_plate_adaptive_sentinel" else 2
-            )
+            # adaptive_sentinel chains a kind-agnostic entity_destruction
+            # ahead of adaptive_strike (F11): a burner-tier build otherwise
+            # leaves the task with zero disruption pressure.
+            assert len(task.disruptions) == 2
             # The goal may mention that disruptions exist and the tools to
             # respond, but never schedule or seeds.
             goal = task.goal_description.lower()
