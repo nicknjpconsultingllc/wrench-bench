@@ -118,6 +118,8 @@ def collect_episode_rows(logs):
             rec_value, rec_meta = _score_meta(sample, RECOVERY_SCORER)
             det_value, det_meta = _score_meta(sample, DETECTION_SCORER)
             latencies = det_meta.get("latencies") or []
+            ep_tr_num = tr_meta.get("pooled_numerator", 0.0)
+            ep_tr_den = tr_meta.get("pooled_denominator", 0.0)
             rows.append(
                 {
                     "model": model,
@@ -127,8 +129,21 @@ def collect_episode_rows(logs):
                     "error": str(episode_error) if episode_error else None,
                     "fires": tr_meta.get("num_fires", 0),
                     "throughput_retained": tr_value,
-                    "tr_numerator": tr_meta.get("pooled_numerator", 0.0),
-                    "tr_denominator": tr_meta.get("pooled_denominator", 0.0),
+                    # Raw (un-winsorized) pooled TR ratio for this episode:
+                    # num/den before winsorize_tr() clamps it to
+                    # [-0.5, 1.5]. See fle/disruptions/scoring.py
+                    # throughput_retained_parts docstring -- kept unclamped
+                    # so dramatic overbuild (TR > 1.5) stays visible instead
+                    # of pegging at the winsorize cap like the headline TR
+                    # does (docs/failure_taxonomy.md finding V4). None when
+                    # the episode isn't scoreable (no fires with a valid
+                    # frozen baseline), matching throughput_retained's None
+                    # policy.
+                    "throughput_retained_raw": (
+                        ep_tr_num / ep_tr_den if ep_tr_den > 0 else None
+                    ),
+                    "tr_numerator": ep_tr_num,
+                    "tr_denominator": ep_tr_den,
                     "recovery_rate": rec_value,
                     "recovered": rec_meta.get("recovered", 0),
                     "scoreable_fires": rec_meta.get("scoreable_fires", 0),
@@ -181,6 +196,13 @@ def aggregate_rows(rows):
                 "throughput_retained": (
                     winsorize_tr(tr_num / tr_den) if tr_den > 0 else None
                 ),
+                # Raw (un-winsorized) pooled TR ratio across all episodes in
+                # this (model, task) group -- see the per-episode comment in
+                # collect_episode_rows for why this is worth surfacing
+                # alongside the winsorized headline TR.
+                "throughput_retained_raw": (
+                    tr_num / tr_den if tr_den > 0 else None
+                ),
                 "tr_numerator": tr_num,
                 "tr_denominator": tr_den,
                 "recovery_rate": recovered / scoreable if scoreable else None,
@@ -215,17 +237,23 @@ def write_markdown(path: Path, aggregates, rows, args):
         "Aggregates use the pooled-ratio rule: sum of raw numerators over sum",
         "of raw denominators across seeds/fires (never mean-of-ratios).",
         "`-` = not scoreable (no fires with a valid frozen baseline).",
+        "TR is winsorized to [-0.5, 1.5] (see fle/disruptions/scoring.py) and",
+        "is the headline metric. TR (raw) is the same pooled ratio before",
+        "that clamp -- it can exceed 1.5 when recovery dramatically",
+        "overbuilds past the pre-disruption baseline, which TR alone cannot",
+        "show once it pegs at the cap (docs/failure_taxonomy.md finding V4).",
         "",
         "## Per-(model, task) aggregates",
         "",
-        "| Model | Task | Episodes | Fires | TR | Recovery | Det. recall "
+        "| Model | Task | Episodes | Fires | TR | TR (raw) | Recovery | Det. recall "
         "| Det. precision (strict, 3-tile) | Det. precision (loose, 10-tile) | Det. latency (ticks) |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for a in aggregates:
         lines.append(
             f"| {a['model']} | {a['task']} | {a['episodes_ok']}/{a['episodes']} "
             f"| {a['fires']} | {_fmt(a['throughput_retained'])} "
+            f"| {_fmt(a['throughput_retained_raw'])} "
             f"| {_fmt(a['recovery_rate'], 2)} | {_fmt(a['detection_recall'], 2)} "
             f"| {_fmt(a['detection_precision_strict'], 2)} "
             f"| {_fmt(a['detection_precision'], 2)} "
@@ -235,14 +263,15 @@ def write_markdown(path: Path, aggregates, rows, args):
         "",
         "## Per-episode results",
         "",
-        "| Model | Task | Seed | Status | Fires | TR | Recovery | Det. recall |",
-        "|---|---|---|---|---|---|---|---|",
+        "| Model | Task | Seed | Status | Fires | TR | TR (raw) | Recovery | Det. recall |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for r in rows:
         lines.append(
             f"| {r['model']} | {r['task']} | {r.get('seed', '-')} "
             f"| {r['status']} | {r.get('fires', '-')} "
             f"| {_fmt(r.get('throughput_retained'))} "
+            f"| {_fmt(r.get('throughput_retained_raw'))} "
             f"| {_fmt(r.get('recovery_rate'), 2)} "
             f"| {_fmt(r.get('detection_recall'), 2)} |"
         )
