@@ -75,6 +75,23 @@ from fle.eval.tasks.task_definitions.task_registry import create_task
 logger = logging.getLogger(__name__)
 
 
+def _available_container_count() -> int:
+    """How many containers _make_instance can actually route run_idx to.
+
+    Must agree with _make_instance's own address resolution: a single
+    external server (FACTORIO_SERVER_ADDRESS/PORT) is capacity 1; otherwise
+    it's however many local containers actually exist. get_simple_server_pool
+    defaults to max_servers=32 (a cloud-scale default) -- calling it with no
+    args handed out run_idx values up to 31 against 3 real containers, and
+    every allocation past 2 failed instantly at _make_instance's own bounds
+    check. Real money was spent on episodes that never got past this.
+    """
+    if os.getenv("FACTORIO_SERVER_ADDRESS") or os.getenv("FACTORIO_SERVER_PORT"):
+        return 1
+    _ips, _udp_ports, tcp_ports = get_local_container_ips()
+    return len(tcp_ports)
+
+
 def _make_instance(run_idx: int) -> FactorioInstance:
     """Connect to the Factorio container for run_idx.
 
@@ -140,7 +157,7 @@ def wrench_solver():
                     / f"{task_key}_seed{seed_offset}_{int(time.time())}"
                 )
 
-            pool = await get_simple_server_pool()
+            pool = await get_simple_server_pool(max_servers=_available_container_count())
             allocation = await pool.get_server_allocation()
             run_idx = allocation.run_idx
             logger.info(
@@ -317,7 +334,7 @@ def wrench_solver():
                     logger.error(f"Error cleaning up instance: {cleanup_err}")
             if run_idx is not None:
                 try:
-                    pool = await get_simple_server_pool()
+                    pool = await get_simple_server_pool(max_servers=_available_container_count())
                     await pool.release_run_idx(run_idx)
                 except Exception as release_err:
                     logger.error(f"Error releasing server: {release_err}")
