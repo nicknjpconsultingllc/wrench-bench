@@ -78,6 +78,12 @@ def main():
         action="store_true",
         help="force the schematic renderer even when sprites are installed",
     )
+    ap.add_argument(
+        "--seed-offset",
+        type=int,
+        default=0,
+        help="shift every DisruptionSpec seed by this amount (replication runs)",
+    )
     args = ap.parse_args()
 
     # sprite renderer needs the extracted sprite set (fle sprites); fall back
@@ -87,8 +93,11 @@ def main():
         print(f"renderer: {'sprites' if use_sprites else 'schematic'}")
 
     task = create_task(args.task)
+    if args.seed_offset:
+        task.with_seed_offset(args.seed_offset)
     steps = args.steps or task.trajectory_length
-    run_dir = Path(args.outdir) / f"{args.task}_{args.model}_{int(time.time())}"
+    suffix = f"_seed{args.seed_offset}" if args.seed_offset else ""
+    run_dir = Path(args.outdir) / f"{args.task}_{args.model}{suffix}_{int(time.time())}"
     run_dir.mkdir(parents=True, exist_ok=True)
     task.ledger_dir = str(run_dir)
 
