@@ -8,9 +8,15 @@ powered consumers -- the simplest legible "single point of failure" proxy
 
 This file connects directly to port 27002, NOT the shared tests/wrench
 fixture (which owns 27000) -- other agents' live suites must not be
-disturbed. It defines its own skip-if-absent instance fixture and does not
-use the `wrench_live` marker, so the parent conftest's autouse reset fixture
-(which resolves `instance` against 27000) never engages here.
+disturbed. It defines its own skip-if-absent instance fixture, and is marked
+`wrench_live` so `pytest -m "not wrench_live"` actually deselects it (its
+skip-if-absent check only fires at fixture setup, i.e. only once a test
+runs -- if something else is listening on 27002, as during a concurrent
+pilot/eval run, it would otherwise happily connect and mutate that
+in-use container). The parent conftest's autouse reset fixture (which
+resolves `instance` against 27000) would normally engage for any
+`wrench_live`-marked test; it's overridden to a no-op below in favor of
+this file's own `_reset` fixture against 27002.
 """
 
 import socket
@@ -20,6 +26,8 @@ import pytest
 from fle.disruptions.scoring import throughput_retained
 from fle.env.entities import Position
 from fle.env.game_types import Prototype
+
+pytestmark = pytest.mark.wrench_live
 
 ADAPTIVE_RCON_PORT = 27002
 SEED = 29
@@ -63,6 +71,15 @@ def adaptive_instance():
         yield inst
     finally:
         inst.cleanup()
+
+
+@pytest.fixture(autouse=True)
+def _reset_between_tests():
+    """Shadow the parent conftest's autouse fixture of the same name, which
+    would otherwise resolve `instance` against port 27000 for any
+    `wrench_live`-marked test. This file's own `_reset` fixture below
+    already handles setup/teardown against its dedicated port 27002."""
+    yield
 
 
 @pytest.fixture(autouse=True)

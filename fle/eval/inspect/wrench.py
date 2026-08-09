@@ -252,9 +252,44 @@ def wrench_solver():
                     )
                     state.messages.append(ChatMessageUser(content=content))
 
-                    state.output = await get_model().generate(
-                        input=state.messages, config={"max_tokens": 4096}
-                    )
+                    try:
+                        state.output = await get_model().generate(
+                            input=state.messages,
+                            config={
+                                "max_tokens": 4096,
+                                # Inspect retries forever (uncapped attempt
+                                # count) when both are left None -- a
+                                # persistently-erroring request would hold
+                                # this episode's container slot indefinitely,
+                                # starving the other episodes queued on the
+                                # pool. Bound it instead: a few retries with
+                                # a per-attempt timeout, then fail the step
+                                # and let the normal step-error retry path
+                                # (below) handle it.
+                                "max_retries": 5,
+                                "timeout": 180,
+                            },
+                        )
+                    except Exception as gen_err:
+                        # generate() can raise directly (e.g. a
+                        # non-retryable OpenRouter error) rather than
+                        # returning empty choices. Same hazard as the
+                        # empty-choices guard below: without a placeholder
+                        # assistant turn, the user message appended just
+                        # above is left dangling and unpaired, corrupting
+                        # the transcript on providers that don't sanitize
+                        # alternation themselves.
+                        logger.warning(
+                            f"WRENCH step {step + 1} generate() error: {gen_err}"
+                        )
+                        feedback = f"Step {step + 1} generation error: {gen_err}"
+                        state.messages.append(
+                            ChatMessageAssistant(
+                                content="[generation failed this step]"
+                            )
+                        )
+                        drain()
+                        continue
                     if not state.output.choices:
                         # A reasoning-heavy model can burn its whole
                         # max_tokens budget on reasoning before producing any
