@@ -175,6 +175,43 @@ def throughput_retained(
     return winsorize_tr(actual / expected)
 
 
+def _first_sustained_recovery_tick(
+    samples: Sequence[dict],
+    item: str,
+    fire_tick: int,
+    budget_ticks: int,
+    baseline: float,
+    threshold: float = 0.9,
+) -> Optional[int]:
+    """Real game tick of the first sample completing a 2-consecutive-window
+    streak at >= ``threshold x baseline``, within
+    ``[fire_tick, fire_tick + budget_ticks]``. None when no such streak
+    occurs inside the budget.
+
+    The trailing series is computed over post-fire samples only, so windows
+    straddling the fire tick cannot smuggle in pre-fire production (otherwise
+    every episode "recovers" at the instant of the fire). Consequently a
+    budget shorter than the trailing window (~1800 ticks) trivially returns
+    None. Shared by ``recovery_at`` (collapses this to a bool) and
+    ``time_to_recovery_parts`` (keeps the tick, for continuous-time scoring).
+    Assumes ``baseline`` has already been validated by the caller (non-None,
+    >= MIN_BASELINE_RATE) -- see the module docstring's denominator policy.
+    """
+    target = threshold * baseline
+    post_samples = [s for s in _sorted_samples(samples) if s["tick"] >= fire_tick]
+    post = [
+        (t, r)
+        for t, r in throughput_series(post_samples, item)
+        if t <= fire_tick + budget_ticks
+    ]
+    streak = 0
+    for t, rate in post:
+        streak = streak + 1 if rate >= target else 0
+        if streak >= 2:
+            return t
+    return None
+
+
 def recovery_at(
     samples: Sequence[dict],
     item: str,
@@ -186,29 +223,101 @@ def recovery_at(
 
     True when the trailing rate reaches ``threshold x frozen_baseline`` at
     two consecutive samples inside ``[fire_tick, fire_tick + budget_ticks]``.
-    The trailing series is computed over post-fire samples only, so windows
-    straddling the fire tick cannot smuggle in pre-fire production (otherwise
-    every episode "recovers" at the instant of the fire). Consequently a
-    budget shorter than the trailing window (~1800 ticks) trivially returns
-    False. Returns None when the frozen baseline is unavailable or near zero
-    (see module docstring).
+    This is the binary threshold-crossing question; it discards WHEN the
+    crossing happened, which is the gap ``time_to_recovery_parts`` fills.
+    Returns None when the frozen baseline is unavailable or near zero (see
+    module docstring).
     """
     baseline = frozen_baseline(samples, item, fire_tick)
     if baseline is None or baseline < MIN_BASELINE_RATE:
         return None
-    target = threshold * baseline
-    post_samples = [s for s in _sorted_samples(samples) if s["tick"] >= fire_tick]
-    post = [
-        (t, r)
-        for t, r in throughput_series(post_samples, item)
-        if t <= fire_tick + budget_ticks
-    ]
-    streak = 0
-    for _, rate in post:
-        streak = streak + 1 if rate >= target else 0
-        if streak >= 2:
-            return True
-    return False
+    tick = _first_sustained_recovery_tick(
+        samples, item, fire_tick, budget_ticks, baseline, threshold
+    )
+    return tick is not None
+
+
+def time_to_recovery_parts(
+    samples: Sequence[dict],
+    item: str,
+    fire_tick: int,
+    budget_ticks: int,
+    threshold: float = 0.9,
+) -> Optional[Dict]:
+    """Raw (duration, event_observed) survival datum behind a continuous
+    time-to-recovery metric -- the efficiency-axis analogue of
+    ``detection_counts``' latencies, and the fix for the gap ``recovery_at``
+    leaves: two episodes that both cross the recovery threshold are
+    identical under ``recovery_at`` (both True) even if one recovered in 200
+    ticks and the other used the entire budget. This function keeps the
+    tick.
+
+    Returns a dict with:
+    - ``ticks``: elapsed ticks from ``fire_tick`` to the first sustained
+      (2-consecutive-window) crossing of ``threshold x frozen_baseline``.
+    - ``recovered``: True when that crossing happened inside the budget.
+    - ``budget_ticks``: the budget passed in, echoed back for convenience.
+
+    When ``recovered`` is False, ``ticks == budget_ticks`` -- the run never
+    crossed the threshold, so the true recovery time is unknown beyond "at
+    least the budget" (**right-censored at the budget**, exactly the
+    Kaplan-Meier-with-censoring convention already used for detection
+    latency in docs/benchmark_design.md: "Non-detections are right-censored
+    -- a mean over detected-only runs is biased toward models that only
+    catch easy faults"). The same bias applies here: silently dropping
+    never-recovered episodes and averaging only the recovered ones would
+    bias the mean toward models that only attempt easy recoveries. Pool
+    ``(ticks, recovered)`` pairs across fires/episodes with a proper
+    survival estimator (Kaplan-Meier / restricted-mean-time-to-recovery)
+    rather than averaging ``ticks`` directly -- that average is exactly the
+    "bare median/mean over observed-only" bias this docstring warns against.
+
+    Returns None under the module's denominator policy: a degenerate or
+    unavailable frozen baseline is "not scoreable" (a broken episode). Do
+    not confuse this with ``recovered=False``, which is a real, meaningful
+    outcome (recovery genuinely did not happen within budget), not a broken
+    episode.
+    """
+    baseline = frozen_baseline(samples, item, fire_tick)
+    if baseline is None or baseline < MIN_BASELINE_RATE:
+        return None
+    tick = _first_sustained_recovery_tick(
+        samples, item, fire_tick, budget_ticks, baseline, threshold
+    )
+    if tick is None:
+        return {
+            "ticks": float(budget_ticks),
+            "recovered": False,
+            "budget_ticks": budget_ticks,
+        }
+    return {
+        "ticks": float(tick - fire_tick),
+        "recovered": True,
+        "budget_ticks": budget_ticks,
+    }
+
+
+def time_to_recovery(
+    samples: Sequence[dict],
+    item: str,
+    fire_tick: int,
+    budget_ticks: int,
+    threshold: float = 0.9,
+) -> Optional[float]:
+    """Single-episode ticks-to-recovery scalar (budget_ticks when censored).
+
+    Convenience wrapper around ``time_to_recovery_parts`` for one-off
+    display or tests. Cross-episode aggregation (Kaplan-Meier, restricted
+    mean time-to-recovery) MUST use ``time_to_recovery_parts``'
+    ``(ticks, recovered)`` pairs instead of collapsing to this scalar and
+    averaging -- see that function's docstring for why (right-censoring
+    bias). Returns None under the same denominator policy as
+    ``time_to_recovery_parts``.
+    """
+    parts = time_to_recovery_parts(samples, item, fire_tick, budget_ticks, threshold)
+    if parts is None:
+        return None
+    return parts["ticks"]
 
 
 def _affected_positions(fire_event) -> List[Tuple[float, float]]:
