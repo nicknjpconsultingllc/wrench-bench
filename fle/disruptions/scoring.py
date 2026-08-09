@@ -331,6 +331,95 @@ def time_to_recovery(
     return parts["ticks"]
 
 
+def recovery_potential(
+    samples: Sequence[dict],
+    item: str,
+    fire_tick: int,
+    tick: int,
+    window_ticks: int = 1800,
+) -> Optional[float]:
+    """Phi(tick): potential-based recovery signal for RL reward shaping.
+
+    Phi(tick) = clip(trailing_rate(tick) / frozen_baseline(fire_tick), 0, 1)
+
+    This is a Ng, Harada & Russell (1999) potential function, not a raw
+    slope bonus: summing ``shaped_reward_delta`` over any span telescopes to
+    ``Phi(end) - Phi(start)``, a single bounded number regardless of how
+    many steps the span was cut into. That makes "creep the trailing rate up
+    by an imperceptible epsilon every window, forever, banking tiny positive
+    rewards without ever meaningfully recovering" structurally impossible --
+    there is no way to earn more total reward by taking smaller steps.
+
+    ``trailing_rate`` is ``throughput_series`` restricted to samples at or
+    after ``fire_tick`` -- the same restriction ``_first_sustained_recovery_tick``
+    applies, for the same reason: a window straddling the fire would still be
+    full of pre-disruption production immediately after the fire, and every
+    episode would look instantly "recovered". Before a full ``window_ticks``
+    of post-fire samples exists, the trailing rate is treated as 0 -- there
+    has not been time to rebuild anything yet, which is exactly the
+    immediate-post-fire floor this function already clips to, so this is a
+    default, not a special case. (It also means ``Phi(fire_tick) == 0``
+    always, by construction.)
+
+    Phi is NOT a running maximum -- it tracks the CURRENT trailing rate at
+    ``tick``, so backsliding after partial recovery correctly lowers Phi
+    (and, through ``shaped_reward_delta``, produces a negative reward that
+    cancels prior credit). A ratchet/running-max version would reopen a
+    version of the same exploit this function is meant to close: touch the
+    baseline once, keep the credit forever.
+
+    Returns None when ``tick`` is before ``fire_tick`` (Phi is only defined
+    post-fire) or when the frozen baseline is unavailable or near zero (<
+    ``MIN_BASELINE_RATE``) -- see the module docstring's denominator policy.
+    Callers must treat None as not-scoreable, never coerce to 0.
+    """
+    if tick < fire_tick:
+        return None
+    baseline = frozen_baseline(samples, item, fire_tick)
+    if baseline is None or baseline < MIN_BASELINE_RATE:
+        return None
+    ordered = _sorted_samples(samples)
+    post = [s for s in ordered if s["tick"] >= fire_tick]
+    series = [
+        (t, rate)
+        for t, rate in throughput_series(post, item, window_ticks)
+        if t <= tick
+    ]
+    rate = series[-1][1] if series else 0.0
+    return max(0.0, min(1.0, rate / baseline))
+
+
+def shaped_reward_delta(
+    samples: Sequence[dict],
+    item: str,
+    fire_tick: int,
+    prev_tick: int,
+    tick: int,
+    window_ticks: int = 1800,
+) -> Optional[float]:
+    """r_shaped(t) = Phi(tick) - Phi(prev_tick).
+
+    The per-step potential-based reward-shaping term (Ng, Harada & Russell
+    1999) for the span ``[prev_tick, tick]`` against ``fire_tick``'s frozen
+    baseline. See ``recovery_potential`` for Phi's definition and the
+    telescoping property that makes this gaming-resistant: summed over any
+    sequence of consecutive (prev_tick, tick) pairs spanning
+    ``[fire_tick, T]``, this collapses to ``Phi(T) - Phi(fire_tick)`` --
+    i.e. ``Phi(T)``, since ``Phi(fire_tick) == 0`` by construction --
+    regardless of step granularity.
+
+    Propagates None if either endpoint is unscoreable (degenerate baseline,
+    or a tick before ``fire_tick``) -- callers must treat None as
+    not-scoreable, never coerce to 0 (a real 0.0 delta and an unscoreable
+    episode are different things).
+    """
+    phi_tick = recovery_potential(samples, item, fire_tick, tick, window_ticks)
+    phi_prev = recovery_potential(samples, item, fire_tick, prev_tick, window_ticks)
+    if phi_tick is None or phi_prev is None:
+        return None
+    return phi_tick - phi_prev
+
+
 def _affected_positions(fire_event) -> List[Tuple[float, float]]:
     positions = []
     for entry in _get(fire_event, "affected", []) or []:
