@@ -648,18 +648,17 @@ class FactorioInstance:
         self.post_tool_hooks = {}
         self.pre_tool_hooks = {}
 
-        # Join all non-daemon threads
-        for thread in threading.enumerate():
-            if (
-                thread != threading.current_thread()
-                and thread.is_alive()
-                and not thread.daemon
-            ):
-                try:
-                    thread.join(timeout=5)  # Wait up to 5 seconds for each thread
-                except Exception as e:
-                    print(f"Error joining thread {thread.name}: {e}")
-
-        # Shutdown the executor
+        # Shutdown the executor. (Previously this also did
+        # `for thread in threading.enumerate(): ... thread.join(timeout=5)`
+        # -- threading.enumerate() returns every non-daemon thread in the
+        # WHOLE PROCESS, not just this instance's own. Under concurrent
+        # episodes (each FactorioInstance owns a 2-worker ThreadPoolExecutor,
+        # non-daemon by default) one episode finishing would find every other
+        # still-busy episode's idle/working threads too and block up to 5s
+        # per thread waiting for work that was never going to finish early --
+        # empirically reproduced as a 15s+ stall of the shared event loop
+        # with 3 concurrent episodes. shutdown(wait=True, cancel_futures=True)
+        # below already correctly and exclusively waits out this instance's
+        # own workers.)
         if hasattr(self, "_executor"):
             self._executor.shutdown(wait=True, cancel_futures=True)

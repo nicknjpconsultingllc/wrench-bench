@@ -31,6 +31,7 @@ import logging
 import os
 import time
 import traceback
+import uuid
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -152,9 +153,18 @@ def wrench_solver():
             )
             ledger_root = os.environ.get("WRENCH_LEDGER_DIR")
             if ledger_root:
+                # uuid, not int(time.time()): the 1-second resolution let two
+                # episodes of the same task_key+seed_offset (e.g. different
+                # models racing the same task in one eval_set startup burst
+                # -- confirmed to actually happen) collide on an identical
+                # ledger directory. EventLedger opens in append mode with no
+                # episode identifier in LedgerEntry, so a collision silently
+                # interleaves two episodes' disruption events into one file
+                # with no exception raised -- corrupted scoring data that
+                # looks completely normal.
                 fle_task.ledger_dir = str(
                     Path(ledger_root)
-                    / f"{task_key}_seed{seed_offset}_{int(time.time())}"
+                    / f"{task_key}_seed{seed_offset}_{uuid.uuid4().hex[:10]}"
                 )
 
             pool = await get_simple_server_pool(max_servers=_available_container_count())
@@ -215,6 +225,15 @@ def wrench_solver():
             steps_completed = 0
 
             for step in range(trajectory_length):
+                # Trim unconditionally at the top of every iteration, not just
+                # on the success tail -- the no-code-block, environment-error,
+                # and generic-step-error paths all used to `continue` past a
+                # trim that only ran after a fully successful step, letting
+                # context balloon unbounded on a rough episode (worst case
+                # ~1 + 2*trajectory_length messages, each carrying a full
+                # game-state dump) and inflate cost for the rest of the run.
+                if len(state.messages) > 25 and state.messages[0].role == "system":
+                    state.messages = [state.messages[0]] + state.messages[-24:]
                 try:
                     observation: Observation = gym_env.get_observation()
                     obs_text = (
@@ -235,6 +254,28 @@ def wrench_solver():
                     state.output = await get_model().generate(
                         input=state.messages, config={"max_tokens": 4096}
                     )
+                    if not state.output.choices:
+                        # A reasoning-heavy model can burn its whole
+                        # max_tokens budget on reasoning before producing any
+                        # visible output, coming back with an empty choices
+                        # list. state.output.message (choices[0].message)
+                        # would raise IndexError here -- before
+                        # parse_response ever runs its own (separately
+                        # unguarded) choices[0] access -- landing in the
+                        # generic step-error handler with a confusing "list
+                        # index out of range" message instead of the intended
+                        # retry guidance. The step is still fully billed for
+                        # the reasoning tokens either way; route it through
+                        # the same graceful retry path as "no code block" so
+                        # at least the model gets a clear, actionable nudge.
+                        feedback = (
+                            "Your reply produced no visible output (likely "
+                            "spent its full token budget on reasoning). "
+                            "Reply with a shorter, more direct ```python "
+                            "code block."
+                        )
+                        drain()
+                        continue
                     state.messages.append(state.output.message)
 
                     program = parse_response(state.output)
@@ -281,10 +322,6 @@ def wrench_solver():
                             f"WRENCH {task_key}: quota met at step {step + 1}; "
                             f"episode continues"
                         )
-
-                    # Trim conversation (keep system + recent turns).
-                    if len(state.messages) > 25 and state.messages[0].role == "system":
-                        state.messages = [state.messages[0]] + state.messages[-24:]
 
                     logger.info(
                         f"WRENCH {task_key} step {step + 1}/{trajectory_length}: "
