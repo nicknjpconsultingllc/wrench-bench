@@ -213,6 +213,16 @@ def main():
 
     inst.cleanup()
 
+    # Best-effort: refresh the viewer's run index (viewer/public/runs/) so a
+    # freshly-finished run shows up without a manual `npm run sync-runs`.
+    # Silent no-op if the viewer isn't set up (e.g. CI, a fresh checkout).
+    sync_script = Path(__file__).resolve().parent.parent / "viewer" / "scripts" / "sync-runs.mjs"
+    if sync_script.exists():
+        try:
+            subprocess.run(["node", str(sync_script)], capture_output=True, timeout=30)
+        except (subprocess.SubprocessError, FileNotFoundError, OSError):
+            pass
+
 
 if __name__ == "__main__":
     main()
