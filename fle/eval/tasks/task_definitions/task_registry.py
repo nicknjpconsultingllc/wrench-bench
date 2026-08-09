@@ -38,6 +38,7 @@ from fle.eval.tasks import (
     UnboundedThroughputTask,
     DefaultTask,
     DisruptionRecoveryTask,
+    ScarcitySentinelTask,
     TaskABC,
 )
 
@@ -71,6 +72,7 @@ class TaskRegistry:
             "unbounded_throughput": UnboundedThroughputTask,
             "default": DefaultTask,
             "disruption_recovery": DisruptionRecoveryTask,
+            "scarcity_disruption_recovery": ScarcitySentinelTask,
             # "unbounded_production" is handled by Inspect framework, not TaskABC
         }
 
