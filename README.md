@@ -128,11 +128,25 @@ with API-key providers so every model row shares one harness.
 
 ## Status
 
-Working vertical slice (engine, tasks, scorers, fixtures, trajectory capture —
-all verified against a live Factorio 2.0.73 server). In progress: pilot
-calibration runs, the first multi-model comparison table, a React trajectory
-viewer, and a `biter_raid` disruption family. Numbers published here will
-always ship with their ledgers and trajectories for independent re-scoring.
+Working vertical slice (engine, tasks, scorers, fixtures, trajectory capture,
+a React trajectory viewer — all verified against a live Factorio 2.0.73
+server). Six sentinel tasks: the three baseline factories, plus three
+durability-focused families designed against the [benchmark-design
+strategy](docs/benchmark_design.md) (task count is not what keeps a benchmark
+relevant for years — resolving power and headroom are):
+
+- `iron_plate_observability_sentinel` — meters inspection calls, so brute-force
+  polling can't substitute for real monitoring.
+- `iron_plate_adaptive_sentinel` — the disruption analyzes the agent's actual
+  build and strikes whatever is most load-bearing, so difficulty tracks
+  capability instead of a fixed task list.
+- `iron_plate_scarcity_sentinel` — no starting infrastructure, no researched
+  tech, genuinely scarce resources, so losing something to a disruption has
+  real cost.
+
+In progress: calibration pilots on the three new families, the first
+multi-model comparison table. Numbers published here will always ship with
+their ledgers and trajectories for independent re-scoring.
 
 The upstream FLE README is preserved at
 [docs/FLE_UPSTREAM_README.md](docs/FLE_UPSTREAM_README.md).
