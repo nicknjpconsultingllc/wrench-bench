@@ -389,6 +389,31 @@ class FactorioInstance:
             rcon_client = RCONClient("localhost", tcp_port, RCON_PASSWORD)
             address = "localhost"
 
+        # factorio_rcon.RCONClient raises ClientBusy on any overlapping call --
+        # it holds exactly one in-flight request. eval()'s ThreadPoolExecutor
+        # path can leave an orphaned worker still running after a timeout
+        # (Future.cancel() does not stop an already-started thread), which
+        # then collides with the next step's call on the same client. Every
+        # WRENCH call site (agent eval, inject_disruption's raw bulk reads,
+        # get_alerts) shares this one connection, so the fix belongs here,
+        # once, rather than in each caller: serialize all send_command(s)
+        # calls through a single lock so a straggler is waited out instead
+        # of racing the next request.
+        rcon_lock = threading.RLock()
+        _send_command = rcon_client.send_command
+        _send_commands = rcon_client.send_commands
+
+        def _locked_send_command(command):
+            with rcon_lock:
+                return _send_command(command)
+
+        def _locked_send_commands(commands):
+            with rcon_lock:
+                return _send_commands(commands)
+
+        rcon_client.send_command = _locked_send_command
+        rcon_client.send_commands = _locked_send_commands
+
         try:
             rcon_client.connect()
             rcon_client.send_command("/sc rcon.print(#game.players)")

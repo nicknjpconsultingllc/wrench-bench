@@ -37,8 +37,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fle.disruptions.scoring import winsorize_tr  # noqa: E402
+from fle.eval.tasks.task_definitions.disruption.sentinel_tasks import (  # noqa: E402
+    DISRUPTION_TASKS,
+)
 
-TASK_KEYS = ["iron_plate_sentinel", "iron_gear_sentinel", "copper_cable_sentinel"]
+# Sourced from the registry so this can't go stale as task families are added
+# (this list predated the observability/adaptive/scarcity families and had to
+# be caught and fixed before the first real published-table run).
+TASK_KEYS = list(DISRUPTION_TASKS.keys())
 
 TR_SCORER = "throughput_retained_scorer"
 RECOVERY_SCORER = "recovery_scorer"
