@@ -107,17 +107,35 @@ class SimpleServerPool:
     async def get_run_idx(self) -> int:
         """Get an available run_idx for connecting to Factorio server.
 
+        Blocks until a slot is free -- a momentarily-empty pool under real
+        concurrency is the EXPECTED case (more (task, model, seed)
+        combinations than containers is normal), not an error. This used to
+        eagerly check `.empty()` and raise instead of waiting, which fired
+        constantly under real load: a free mockllm smoke test at the actual
+        planned command's concurrency shape (3 tasks x 3 models, up to 18
+        concurrent allocation attempts against 3 containers) lost 50% of
+        episodes to this exact path -- each one silently recorded as a
+        "successful" 0-fire episode (wrench.py's outer except swallows the
+        RuntimeError into a normal-looking completion), invisible in the
+        results table. `asyncio.wait_for` keeps a hang from being silent if
+        something is *actually* stuck (e.g. a leaked allocation) rather than
+        just momentarily busy.
+
         Note: For API key assignment, use get_server_allocation() instead.
         """
         await self.initialize()
 
-        if self.available_indices.empty():
-            raise RuntimeError(
-                f"All {self.max_servers} servers are in use. "
-                f"Consider reducing --max-connections or starting more containers with 'fle cluster start -n N'"
+        try:
+            run_idx = await asyncio.wait_for(
+                self.available_indices.get(), timeout=900
             )
-
-        run_idx = await self.available_indices.get()
+        except asyncio.TimeoutError:
+            raise RuntimeError(
+                f"Timed out after 900s waiting for a free server slot "
+                f"(all {self.max_servers} in use). This means something is "
+                f"genuinely stuck, not just busy -- a released run_idx should "
+                f"free a slot well within this window."
+            )
         self.allocated_indices.add(run_idx)
 
         logger.info(f"Allocated run_idx {run_idx} (server factorio_{run_idx})")
@@ -136,13 +154,20 @@ class SimpleServerPool:
         """
         await self.initialize()
 
-        if self.available_indices.empty():
-            raise RuntimeError(
-                f"All {self.max_servers} servers are in use. "
-                f"Consider reducing --max-connections or starting more containers with 'fle cluster start -n N'"
+        # See get_run_idx's docstring: block-and-wait, don't fail-fast on a
+        # momentarily-empty pool -- that's the normal case under real
+        # concurrency, not an error condition.
+        try:
+            run_idx = await asyncio.wait_for(
+                self.available_indices.get(), timeout=900
             )
-
-        run_idx = await self.available_indices.get()
+        except asyncio.TimeoutError:
+            raise RuntimeError(
+                f"Timed out after 900s waiting for a free server slot "
+                f"(all {self.max_servers} in use). This means something is "
+                f"genuinely stuck, not just busy -- a released run_idx should "
+                f"free a slot well within this window."
+            )
         self.allocated_indices.add(run_idx)
 
         # Get next API key

@@ -96,6 +96,24 @@ def collect_episode_rows(logs):
             continue
         for sample in log.samples or []:
             meta = sample.metadata or {}
+            # wrench_solver's own try/except always returns `state` normally
+            # rather than re-raising -- so a WRENCH-internal failure (a
+            # server-pool timeout, an instance-creation error, anything
+            # caught by solve()'s outer except) never sets sample.error, the
+            # only thing this function used to check. It DOES set
+            # WrenchData.error (wrench.py, store_as(WrenchData)), which
+            # lands in the serialized sample.store under "WrenchData:error".
+            # Without checking it too, an infra-level failure is
+            # indistinguishable from a genuine 0-fire success -- exactly how
+            # the pool-exhaustion bug went unnoticed in an earlier run: every
+            # failed episode still said "success" here. Check both.
+            store = getattr(sample, "store", None) or {}
+            wrench_error = (
+                store.get("WrenchData:error")
+                if hasattr(store, "get")
+                else None
+            )
+            episode_error = sample.error or wrench_error
             tr_value, tr_meta = _score_meta(sample, TR_SCORER)
             rec_value, rec_meta = _score_meta(sample, RECOVERY_SCORER)
             det_value, det_meta = _score_meta(sample, DETECTION_SCORER)
@@ -105,8 +123,8 @@ def collect_episode_rows(logs):
                     "model": model,
                     "task": meta.get("task_key", task_name),
                     "seed": meta.get("seed_offset"),
-                    "status": "error" if sample.error else "success",
-                    "error": str(sample.error) if sample.error else None,
+                    "status": "error" if episode_error else "success",
+                    "error": str(episode_error) if episode_error else None,
                     "fires": tr_meta.get("num_fires", 0),
                     "throughput_retained": tr_value,
                     "tr_numerator": tr_meta.get("pooled_numerator", 0.0),

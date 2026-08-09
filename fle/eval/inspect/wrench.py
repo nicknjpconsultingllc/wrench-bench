@@ -39,6 +39,7 @@ from inspect_ai import Task, task
 from inspect_ai.agent import AgentState
 from inspect_ai.dataset import Sample
 from inspect_ai.model import (
+    ChatMessageAssistant,
     ChatMessageSystem,
     ChatMessageUser,
     ModelOutput,
@@ -273,6 +274,28 @@ def wrench_solver():
                             "spent its full token budget on reasoning). "
                             "Reply with a shorter, more direct ```python "
                             "code block."
+                        )
+                        # Unlike the no-code-block/environment-error paths
+                        # (which append the real state.output.message before
+                        # their own `continue`, at the line right below this
+                        # block), there IS no real assistant message here --
+                        # state.output.choices is empty, so state.output.message
+                        # would itself raise. Without a placeholder, this
+                        # `continue` leaves a dangling, unpaired user message
+                        # in state.messages; combined with the unconditional
+                        # top-of-loop trim, that can produce two consecutive
+                        # user messages or assistant-immediately-after-system
+                        # on a later trim (verified by simulation). OpenRouter's
+                        # Anthropic path does not enable inspect_ai's
+                        # collapse_user_messages/collapse_assistant_messages
+                        # sanitization (unlike the direct Anthropic provider,
+                        # which does specifically because the native API
+                        # rejects non-alternating roles) -- so keep every
+                        # provider's transcript strictly paired ourselves.
+                        state.messages.append(
+                            ChatMessageAssistant(
+                                content="[no output produced this step]"
+                            )
                         )
                         drain()
                         continue
