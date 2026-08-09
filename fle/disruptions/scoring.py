@@ -25,6 +25,17 @@ MIN_BASELINE_RATE = 1e-6
 
 TICKS_PER_MINUTE = 3600
 
+# Below this loose-radius precision, ``detection_metrics`` gates recall to
+# 0.0 (see its docstring for the full anti-spam rationale). 0.5 sits right
+# on the boundary of the real-pilot double-report case exercised by
+# tests/wrench/test_scoring.py::test_strict_radius_separates_nearby_from_exact
+# (an agent that reports one real fault twice -- once precisely, once
+# loosely -- lands at precision==0.5 exactly and is NOT gated) while
+# decisively catching volume spam (measured precision ~0.1 for a 10x-report
+# sweep of a single known position in
+# tests/wrench/test_detection_gaming.py).
+DETECTION_PRECISION_FLOOR = 0.5
+
 
 def _get(obj, key, default=None):
     """Read `key` from a dict or an attribute from an object."""
@@ -364,12 +375,37 @@ def detection_counts(
     ``num_fires``) so callers can pool detection precision/recall across
     episodes and seeds (sum numerators / sum denominators) instead of
     averaging per-episode ratios.
+
+    Diminishing returns on report volume: ``matched_reports`` and
+    ``matched_reports_strict`` are CREDITED match counts, capped at ONE
+    credit per fired event (the earliest matching report), not a raw count
+    of every report that happens to match. ``num_reports`` stays the true,
+    uncapped report volume. ``report_fault`` is a free, unmetered no-op
+    tool (see ``fle.env.tools.agent.report_fault`` and
+    ``fle.eval.tasks.observability_budget.DEFAULT_METERED_TOOLS``) that
+    costs only one of an agent's ~32-48 trajectory steps, so without this
+    cap a policy could resubmit the same accurate report, or sweep a small
+    fixed set of positions it already knows about (e.g. every entity it has
+    ever placed), and be scored identically to a single genuine detection.
+    Measured live (tests/wrench/test_detection_gaming.py): 10 identical,
+    accurate report_fault calls at a 250-tick cadence against one fired
+    event previously produced matched_reports=10 -- precision=1.0, exactly
+    like a lone accurate report. Capping credit to the earliest match per
+    fire while leaving ``num_reports`` uncapped makes report volume
+    directly suppress precision (measured ~0.1 for that same 10-report
+    sweep post-fix).
     """
     reports = [e for e in ledger_entries if _get(e, "event") == "report_fault"]
     report_info = [(int(_get(r, "tick", 0)), _report_position(r)) for r in reports]
+    # strict variant: a 3-tile radius separates "named the damaged entity"
+    # from "reported something nearby" (the loose 10-tile radius credited a
+    # full-chest report 6.7 tiles from a destroyed drill in the first pilot)
+    strict_radius = min(3.0, radius)
 
     latencies: List[int] = []
     matched_fires = 0
+    matched_reports = 0
+    matched_reports_strict = 0
     for fire in fire_events:
         fire_tick = int(_get(fire, "tick", 0))
         matching_ticks = [
@@ -379,22 +415,11 @@ def detection_counts(
         ]
         if matching_ticks:
             matched_fires += 1
+            matched_reports += 1  # capped: only the earliest match is credited
             latencies.append(min(matching_ticks) - fire_tick)
+        if any(_matches(tick, pos, fire, strict_radius) for tick, pos in report_info):
+            matched_reports_strict += 1  # ditto, at the strict radius
 
-    matched_reports = sum(
-        1
-        for tick, pos in report_info
-        if any(_matches(tick, pos, fire, radius) for fire in fire_events)
-    )
-    # strict variant: a 3-tile radius separates "named the damaged entity"
-    # from "reported something nearby" (the loose 10-tile radius credited a
-    # full-chest report 6.7 tiles from a destroyed drill in the first pilot)
-    strict_radius = min(3.0, radius)
-    matched_reports_strict = sum(
-        1
-        for tick, pos in report_info
-        if any(_matches(tick, pos, fire, strict_radius) for fire in fire_events)
-    )
     return {
         "latencies": latencies,
         "matched_reports": matched_reports,
@@ -409,6 +434,7 @@ def detection_metrics(
     ledger_entries: Sequence,
     fire_events: Sequence,
     radius: float = 10.0,
+    precision_floor: float = DETECTION_PRECISION_FLOOR,
 ) -> Dict:
     """Detection latency/precision/recall from report_fault vs fired events.
 
@@ -417,13 +443,27 @@ def detection_metrics(
 
     - ``latencies``: for each fired event (in order), the tick delta to the
       FIRST matching report; events never matched contribute no latency.
-    - ``precision``: fraction of report_fault entries matching some fired
-      event. 1.0 when there are no reports (vacuously no false positives).
-    - ``recall``: fraction of fired events ever matched. 1.0 when there are
-      no fired events.
+    - ``precision`` / ``precision_strict``: credited matches (at most one
+      per fired event -- see ``detection_counts``) over raw report volume.
+      1.0 when there are no reports (vacuously no false positives).
+    - ``recall``: fraction of fired events ever matched, GATED to 0.0
+      whenever ``precision`` (the loose-radius one) falls below
+      ``precision_floor`` and there is at least one fired event. 1.0 when
+      there are no fired events (vacuous -- there is nothing for the gate
+      to withhold).
+
+    The recall gate is the anti-spam guard, not just the volume-sensitive
+    precision above it: ``fle.eval.inspect.integration.wrench_scorers
+    .detection_scorer`` reports ``recall`` itself as the scored Inspect
+    ``Score.value`` (precision only ever reaches ``metadata``, which no
+    aggregator currently reads), so a policy that is mostly noise but
+    happens to land one lucky/redundant hit must not still walk away with
+    recall=1.0 -- it has to actually be precise enough to earn credit for
+    "found it". See ``DETECTION_PRECISION_FLOOR`` for why 0.5 was chosen.
 
     Use ``detection_counts`` when you need the raw numerators/denominators
-    for cross-episode pooling.
+    for cross-episode pooling (pooled precision/recall should be computed
+    from summed counts, not by averaging this gate's already-gated output).
     """
     c = detection_counts(ledger_entries, fire_events, radius)
     num_reports = c["num_reports"]
@@ -432,6 +472,8 @@ def detection_metrics(
         c["matched_reports_strict"] / num_reports if num_reports else 1.0
     )
     recall = c["matched_fires"] / c["num_fires"] if c["num_fires"] else 1.0
+    if c["num_fires"] and precision < precision_floor:
+        recall = 0.0
     return {
         "latencies": c["latencies"],
         "precision": precision,
