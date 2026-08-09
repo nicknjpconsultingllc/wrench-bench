@@ -273,6 +273,18 @@ def main():
     )
     ap.add_argument("--outdir", default="table_runs")
     ap.add_argument(
+        "--resume",
+        default=None,
+        help="Path to an existing run dir (e.g. table_runs/20260809T160623) to "
+        "resume into instead of starting a fresh timestamped dir. Every "
+        "invocation without this flag mints a brand-new log_dir, and "
+        "eval_set's resume/retry scan only kicks in when log_dir is reused "
+        "across runs -- so a crash/restart with the plain command silently "
+        "re-runs (and re-pays for) every episode, completed or not. Pass "
+        "the run_dir printed by the interrupted run to pick up only the "
+        "unfinished (model, task, seed) combinations.",
+    )
+    ap.add_argument(
         "--max-connections", type=int, default=4, help="Max concurrent model calls"
     )
     ap.add_argument(
@@ -297,7 +309,14 @@ def main():
 
     from fle.eval.inspect.wrench import create_wrench_task
 
-    run_dir = Path(args.outdir) / time.strftime("%Y%m%dT%H%M%S")
+    if args.resume:
+        run_dir = Path(args.resume)
+        if not run_dir.is_dir():
+            ap.error(f"--resume path does not exist or is not a directory: {run_dir}")
+        resuming = True
+    else:
+        run_dir = Path(args.outdir) / time.strftime("%Y%m%dT%H%M%S")
+        resuming = False
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "ledgers").mkdir(exist_ok=True)
     import os
@@ -315,9 +334,15 @@ def main():
     ]
 
     print(
-        f"Running {len(args.models)} model(s) x {len(args.task_keys)} task(s) "
-        f"x {args.seeds} seed(s) -> {run_dir}"
+        f"{'Resuming' if resuming else 'Running'} {len(args.models)} model(s) "
+        f"x {len(args.task_keys)} task(s) x {args.seeds} seed(s) -> {run_dir}"
     )
+    if resuming:
+        print(
+            "Resume mode: eval_set will scan the existing log_dir and skip "
+            "(model, task, seed) combinations that already have a completed "
+            "log there -- only unfinished ones will make new model calls."
+        )
     eval_kwargs = dict(
         tasks=tasks,
         model=args.models,
