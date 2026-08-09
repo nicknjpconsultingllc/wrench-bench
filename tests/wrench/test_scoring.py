@@ -4,6 +4,7 @@ import pytest
 
 from fle.disruptions.ledger import LedgerEntry
 from fle.disruptions.scoring import (
+    detection_counts,
     detection_metrics,
     frozen_baseline,
     recovery_at,
@@ -222,8 +223,16 @@ class TestDetectionMetrics:
         exact = report(7000, x=16.0, y=71.0)
         nearby = report(8000, x=20.5, y=75.5)  # ~6.7 tiles away
         m = detection_metrics([fire, exact, nearby], [fire])
-        assert m["precision"] == 1.0
+        # Anti-spam diminishing-returns cap (see detection_counts): credit
+        # for a fired event is capped at its earliest matching report, so
+        # the second (nearby) report about the SAME single fault adds to
+        # num_reports (volume) without adding further numerator credit.
+        # precision == 0.5 sits exactly on DETECTION_PRECISION_FLOOR, which
+        # is chosen so this legitimate double-report case is NOT gated
+        # (0.5 is not < the floor) while an actual spam sweep is.
+        assert m["precision"] == 0.5
         assert m["precision_strict"] == 0.5
+        assert m["recall"] == 1.0  # not gated: precision sits at, not below, the floor
 
     def test_missed_fire(self):
         fire = fired(6000, [{"name": "stone-furnace", "x": 2.0, "y": 0.0}])
@@ -244,3 +253,43 @@ class TestDetectionMetrics:
         }
         m = detection_metrics([fire, rep], [fire])
         assert m["latencies"] == [300]
+
+    def test_report_spam_gets_no_extra_precision_credit(self):
+        # Same accurate position, resubmitted repeatedly (the cheap,
+        # cadence-based exploit this cap exists to close -- report_fault is
+        # a free, unmetered tool: fle.eval.tasks.observability_budget
+        # .DEFAULT_METERED_TOOLS does not include it). Before the cap this
+        # scored identically to a single accurate report: precision=1.0,
+        # recall=1.0.
+        fire = fired(6000, [{"name": "stone-furnace", "x": 2.0, "y": 0.0}])
+        spam = [report(6100 + 100 * i, 2.0, 0.0) for i in range(10)]
+        ledger = [fire] + spam
+        c = detection_counts(ledger, [fire])
+        assert c["matched_reports"] == 1  # capped: one credit for the one fire
+        assert c["num_reports"] == 10  # raw volume stays uncapped
+        m = detection_metrics(ledger, [fire])
+        assert m["precision"] == pytest.approx(0.1)
+        assert m["recall"] == 0.0  # gated: precision (0.1) < DETECTION_PRECISION_FLOOR
+
+    def test_single_accurate_report_is_not_gated(self):
+        # The contrast case: one genuine, accurate report_fault call earns
+        # full precision and is never touched by the gate.
+        fire = fired(6000, [{"name": "stone-furnace", "x": 2.0, "y": 0.0}])
+        ledger = [fire, report(6100, 2.0, 0.0)]
+        m = detection_metrics(ledger, [fire])
+        assert m["precision"] == 1.0
+        assert m["recall"] == 1.0
+
+    def test_spam_across_distinct_fires_each_earns_one_credit(self):
+        # The cap is per FIRED EVENT, not a global "first report only" --
+        # an agent that accurately reports N genuinely distinct incidents
+        # once each should not be penalized relative to one that reports
+        # a single incident N times.
+        fire1 = fired(6000, [{"name": "stone-furnace", "x": 2.0, "y": 0.0}])
+        fire2 = fired(6500, [{"name": "stone-furnace", "x": 50.0, "y": 0.0}])
+        ledger = [fire1, fire2, report(6100, 2.0, 0.0), report(6600, 50.0, 0.0)]
+        c = detection_counts(ledger, [fire1, fire2])
+        assert c["matched_reports"] == 2
+        m = detection_metrics(ledger, [fire1, fire2])
+        assert m["precision"] == 1.0
+        assert m["recall"] == 1.0
