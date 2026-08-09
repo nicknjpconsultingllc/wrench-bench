@@ -9,6 +9,8 @@ from fle.disruptions.scoring import (
     recovery_at,
     throughput_retained,
     throughput_series,
+    time_to_recovery,
+    time_to_recovery_parts,
 )
 
 INTERVAL = 41  # engine sample interval in ticks
@@ -44,6 +46,17 @@ def drop_and_recovery():
 def never_recovers():
     """40/min until FIRE_TICK, then flatline forever."""
     return make_samples([(FIRE_TICK, 40.0), (9000, 0.0)])
+
+
+@pytest.fixture
+def slow_recovery():
+    """40/min until FIRE_TICK, dead for 1800 ticks, a slow 10/min trickle for
+    5400 ticks, then back to 40/min -- an "organic regrowth" curve that
+    eventually crosses the recovery threshold, just much later than
+    ``drop_and_recovery``'s step-function snap-back."""
+    return make_samples(
+        [(FIRE_TICK, 40.0), (1800, 0.0), (5400, 10.0), (9000, 40.0)]
+    )
 
 
 class TestThroughputSeries:
@@ -152,6 +165,77 @@ class TestRecoveryAt:
     def test_near_zero_baseline_returns_none(self):
         samples = make_samples([(FIRE_TICK, 0.0), (3600, 40.0)])
         assert recovery_at(samples, "iron-plate", FIRE_TICK, 3600) is None
+
+
+class TestTimeToRecovery:
+    """Continuous time-to-recovery: the efficiency axis recovery_at cannot
+    express on its own, since two both-successful recoveries collapse to the
+    same `True` regardless of how many ticks each one took."""
+
+    def test_clean_fast_recovery(self, drop_and_recovery):
+        parts = time_to_recovery_parts(
+            drop_and_recovery, "iron-plate", FIRE_TICK, 7200
+        )
+        assert parts["recovered"] is True
+        assert parts["budget_ticks"] == 7200
+        # Dead for 1800 ticks, then the trailing window (1800) needs to fill
+        # with full-rate production before crossing 0.9x -- recovery lands
+        # sometime after the dead zone but comfortably inside the budget.
+        assert 1800 < parts["ticks"] < 7200
+        assert time_to_recovery(
+            drop_and_recovery, "iron-plate", FIRE_TICK, 7200
+        ) == pytest.approx(parts["ticks"])
+
+    def test_slow_but_eventual_recovery_takes_longer_than_fast(
+        self, drop_and_recovery, slow_recovery
+    ):
+        fast = time_to_recovery(drop_and_recovery, "iron-plate", FIRE_TICK, 16200)
+        slow = time_to_recovery(slow_recovery, "iron-plate", FIRE_TICK, 16200)
+        assert fast is not None and slow is not None
+        # This is exactly the distinction TR (and the binary recovery_at)
+        # cannot make once both curves cross the same threshold: a
+        # step-function snap-back and a slow organic ramp both eventually
+        # "recover", but the continuous metric orders them by speed.
+        assert slow > fast
+
+    def test_never_recovers_is_censored_at_budget(self, never_recovers):
+        parts = time_to_recovery_parts(never_recovers, "iron-plate", FIRE_TICK, 9000)
+        assert parts["recovered"] is False
+        # Right-censored: we only know the true recovery time is >= budget,
+        # so the censored duration IS the budget, not None and not a bare
+        # guess -- this is what lets a downstream Kaplan-Meier estimator
+        # treat it correctly instead of silently dropping the episode.
+        assert parts["ticks"] == 9000.0
+        assert time_to_recovery(never_recovers, "iron-plate", FIRE_TICK, 9000) == 9000.0
+
+    def test_near_zero_baseline_returns_none(self):
+        # Same denominator policy as throughput_retained/recovery_at: a
+        # degenerate pre-fire baseline is "not scoreable", which must not be
+        # confused with the real, meaningful recovered=False outcome above.
+        samples = make_samples([(FIRE_TICK, 0.0), (3600, 40.0)])
+        assert time_to_recovery_parts(samples, "iron-plate", FIRE_TICK, 3600) is None
+        assert time_to_recovery(samples, "iron-plate", FIRE_TICK, 3600) is None
+
+    def test_no_samples_returns_none(self):
+        assert time_to_recovery_parts([], "iron-plate", FIRE_TICK, 3600) is None
+        assert time_to_recovery([], "iron-plate", FIRE_TICK, 3600) is None
+
+    def test_consistent_with_recovery_at(self, drop_and_recovery, never_recovers):
+        # time_to_recovery_parts' `recovered` flag must agree with
+        # recovery_at's boolean for the same inputs (parts is a strict
+        # refinement, not a different notion of "recovered").
+        assert (
+            time_to_recovery_parts(drop_and_recovery, "iron-plate", FIRE_TICK, 7200)[
+                "recovered"
+            ]
+            == recovery_at(drop_and_recovery, "iron-plate", FIRE_TICK, 7200)
+        )
+        assert (
+            time_to_recovery_parts(never_recovers, "iron-plate", FIRE_TICK, 9000)[
+                "recovered"
+            ]
+            == recovery_at(never_recovers, "iron-plate", FIRE_TICK, 9000)
+        )
 
 
 def fired(tick, affected):
