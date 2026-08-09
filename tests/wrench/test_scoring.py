@@ -8,6 +8,8 @@ from fle.disruptions.scoring import (
     detection_metrics,
     frozen_baseline,
     recovery_at,
+    recovery_potential,
+    shaped_reward_delta,
     throughput_retained,
     throughput_series,
     time_to_recovery,
@@ -236,6 +238,182 @@ class TestTimeToRecovery:
                 "recovered"
             ]
             == recovery_at(never_recovers, "iron-plate", FIRE_TICK, 9000)
+        )
+
+
+@pytest.fixture
+def touch_and_abandon():
+    """40/min until FIRE_TICK, dead 1800 ticks, a full-rate spike for 2400
+    ticks (long enough to fully fill the 1800-tick trailing window), then
+    dead again for good -- "touch the baseline once, then abandon it"."""
+    return make_samples(
+        [(FIRE_TICK, 40.0), (1800, 0.0), (2400, 40.0), (5400, 0.0)]
+    )
+
+
+class TestRecoveryPotential:
+    """Phi(tick): the potential-based signal shaped_reward_delta is built
+    from. See recovery_potential's docstring for the full design rationale;
+    these tests are the adversarial proof of its gaming-resistance claims."""
+
+    def test_phi_at_fire_tick_is_always_zero(self, drop_and_recovery, never_recovers):
+        # No post-fire trailing window can be full at the instant of the
+        # fire, regardless of what the curve does afterward -- this is what
+        # lets orchestration reset "phi_prev" to 0 on a new fire without a
+        # separately stored scalar (see fle/eval/inspect/wrench.py).
+        for samples in (drop_and_recovery, never_recovers):
+            assert recovery_potential(samples, "iron-plate", FIRE_TICK, FIRE_TICK) == 0.0
+
+    def test_tick_before_fire_returns_none(self, drop_and_recovery):
+        assert (
+            recovery_potential(drop_and_recovery, "iron-plate", FIRE_TICK, FIRE_TICK - 100)
+            is None
+        )
+
+    def test_overshoot_clips_to_one(self):
+        # Rate quadruples post-fire (mirrors TestThroughputRetained's
+        # winsorized-overshoot case) -- Phi must clip to 1.0, never read the
+        # raw 4.0 ratio. This is the upper half of "Phi never exceeds 1 or
+        # goes below 0 regardless of input".
+        samples = make_samples([(FIRE_TICK, 40.0), (7200, 160.0)])
+        phi = recovery_potential(samples, "iron-plate", FIRE_TICK, FIRE_TICK + 7200)
+        assert phi == 1.0
+
+    def test_counter_regression_floors_at_zero(self):
+        # A production counter that goes backwards (e.g. a stats reset)
+        # must not send Phi negative -- the clip floors at 0, same as a
+        # dead factory, never a penalty channel below "producing nothing".
+        # This is the lower half of the same bounds claim.
+        samples = make_samples([(FIRE_TICK, 40.0), (3600, 0.0)])
+        samples.append(
+            {"tick": samples[-1]["tick"] + 41, "counts": {"iron-plate": -1000.0}}
+        )
+        phi = recovery_potential(samples, "iron-plate", FIRE_TICK, samples[-1]["tick"])
+        assert phi is not None
+        assert 0.0 <= phi <= 1.0
+
+    def test_never_recovers_stays_at_floor(self, never_recovers):
+        # A flatlined factory never exceeds baseline, so Phi should sit at
+        # its floor (0) throughout the post-fire episode -- exercised at
+        # every sample tick, not just the endpoints.
+        for t, _ in throughput_series(never_recovers, "iron-plate"):
+            if t < FIRE_TICK:
+                continue
+            phi = recovery_potential(never_recovers, "iron-plate", FIRE_TICK, t)
+            assert phi is not None
+            assert 0.0 <= phi <= 1.0
+
+    def test_degenerate_baseline_returns_none(self):
+        samples = make_samples([(FIRE_TICK, 0.0), (3600, 40.0)])  # dead pre-fire
+        assert (
+            recovery_potential(samples, "iron-plate", FIRE_TICK, FIRE_TICK + 3600)
+            is None
+        )
+
+    def test_no_samples_returns_none(self):
+        assert recovery_potential([], "iron-plate", FIRE_TICK, FIRE_TICK) is None
+
+
+class TestShapedRewardDelta:
+    """Adversarial tests for the gaming-resistance properties the design
+    claims for the potential-based reward-shaping signal (Ng, Harada &
+    Russell 1999): telescoping sums and no reward for abandoned recovery."""
+
+    def test_telescoping_sum_invariant_to_step_granularity(self, drop_and_recovery):
+        """The SAME recovery curve, measured as one coarse "big jump" delta
+        spanning the whole post-fire episode vs. summed over many "tiny
+        step" deltas at every ~41-tick sample in between, earns identical
+        total shaped reward. This is the telescoping property that makes
+        "creep the rate up in imperceptible increments forever, banking
+        tiny rewards" structurally impossible: there is no way to earn more
+        total reward by slicing the same trajectory more finely.
+        """
+        samples = drop_and_recovery
+        item = "iron-plate"
+        post_fire_ticks = sorted(
+            s["tick"] for s in samples if s["tick"] >= FIRE_TICK
+        )
+        end_tick = post_fire_ticks[-1]
+
+        # One big jump: a single delta spanning the whole span.
+        coarse_total = shaped_reward_delta(samples, item, FIRE_TICK, FIRE_TICK, end_tick)
+        assert coarse_total is not None
+
+        # Many tiny steps: a delta for every consecutive pair of post-fire
+        # sample ticks, summed.
+        fine_total = 0.0
+        prev_tick = FIRE_TICK
+        for t in post_fire_ticks:
+            d = shaped_reward_delta(samples, item, FIRE_TICK, prev_tick, t)
+            assert d is not None
+            fine_total += d
+            prev_tick = t
+
+        assert fine_total == pytest.approx(coarse_total, abs=1e-9)
+        # And both agree with Phi read directly at the endpoints
+        # (Phi(fire_tick) == 0, so the delta is just Phi(end_tick)).
+        assert coarse_total == pytest.approx(
+            recovery_potential(samples, item, FIRE_TICK, end_tick), abs=1e-9
+        )
+
+    def test_touch_baseline_once_then_abandon_does_not_keep_reward(
+        self, touch_and_abandon
+    ):
+        """A policy that briefly touches the baseline and then abandons
+        recovery must not walk away with the reward it earned during the
+        touch -- a later negative delta has to cancel it. This is the
+        structural fix for the "touch it once, keep the credit forever"
+        exploit a running-max (ratchet) version of Phi would reopen."""
+        samples = touch_and_abandon
+        item = "iron-plate"
+        peak_tick = FIRE_TICK + 1800 + 2400  # end of the full-rate spike
+        final_tick = samples[-1]["tick"]
+
+        phi_peak = recovery_potential(samples, item, FIRE_TICK, peak_tick)
+        phi_final = recovery_potential(samples, item, FIRE_TICK, final_tick)
+        assert phi_peak == pytest.approx(1.0, abs=0.1)  # briefly touched baseline
+        assert phi_final == pytest.approx(0.0, abs=0.1)  # abandoned -- decayed back down
+
+        # The delta covering the abandonment must be negative, and it must
+        # exactly cancel the credit banked during the spike.
+        late_delta = shaped_reward_delta(samples, item, FIRE_TICK, peak_tick, final_tick)
+        assert late_delta is not None
+        assert late_delta < 0
+        assert phi_peak + late_delta == pytest.approx(phi_final, abs=1e-9)
+
+        # Net total shaped reward across the whole episode is ~0 -- the
+        # spike earned no permanent credit once the policy abandoned it.
+        total = shaped_reward_delta(samples, item, FIRE_TICK, FIRE_TICK, final_tick)
+        assert total == pytest.approx(0.0, abs=0.1)
+
+    def test_degenerate_baseline_returns_none(self):
+        samples = make_samples([(FIRE_TICK, 0.0), (3600, 40.0)])  # dead pre-fire
+        assert (
+            shaped_reward_delta(
+                samples, "iron-plate", FIRE_TICK, FIRE_TICK, FIRE_TICK + 3600
+            )
+            is None
+        )
+
+    def test_one_degenerate_endpoint_propagates_none(self, drop_and_recovery):
+        # prev_tick before fire_tick makes only ONE endpoint unscoreable --
+        # the whole delta must still propagate None, not silently fall back
+        # to treating the missing endpoint as 0.
+        assert (
+            shaped_reward_delta(
+                drop_and_recovery,
+                "iron-plate",
+                FIRE_TICK,
+                FIRE_TICK - 100,
+                FIRE_TICK + 3600,
+            )
+            is None
+        )
+
+    def test_no_samples_returns_none(self):
+        assert (
+            shaped_reward_delta([], "iron-plate", FIRE_TICK, FIRE_TICK, FIRE_TICK)
+            is None
         )
 
 

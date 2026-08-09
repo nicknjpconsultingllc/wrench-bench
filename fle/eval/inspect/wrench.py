@@ -50,6 +50,8 @@ from inspect_ai.util import store_as
 
 from fle.agents.llm.parsing import parse_response
 from fle.commons.cluster_ips import get_local_container_ips
+from fle.disruptions.scoring import recovery_potential, shaped_reward_delta
+from fle.disruptions.trajectory import TrajectoryWriter
 from fle.env import FactorioInstance
 from fle.env.gym_env.action import Action
 from fle.env.gym_env.environment import FactorioGymEnv
@@ -145,6 +147,7 @@ def wrench_solver():
 
         run_idx = None
         instance: Optional[FactorioInstance] = None
+        writer: Optional[TrajectoryWriter] = None
         try:
             fle_task: DisruptionRecoveryTask = create_task(task_key).with_seed_offset(
                 seed_offset
@@ -167,6 +170,15 @@ def wrench_solver():
                     Path(ledger_root)
                     / f"{task_key}_seed{seed_offset}_{uuid.uuid4().hex[:10]}"
                 )
+
+            # Per-step trajectory capture, opt-in via WRENCH_TRAJECTORY_DIR
+            # (mirrors the WRENCH_LEDGER_DIR opt-in above). TrajectoryWriter
+            # .for_env returns None -- a no-op -- when the env var is unset.
+            # Same uuid-not-timestamp collision reasoning as ledger_dir above:
+            # two episodes of the same task_key+seed_offset must not share a
+            # trajectory file.
+            episode_name = f"{task_key}_seed{seed_offset}_{uuid.uuid4().hex[:10]}"
+            writer = TrajectoryWriter.for_env(episode_name)
 
             pool = await get_simple_server_pool(max_servers=_available_container_count())
             allocation = await pool.get_server_allocation()
@@ -204,8 +216,55 @@ def wrench_solver():
 
             samples: List[dict] = []
 
-            def drain() -> None:
-                """Incrementally drain engine samples + events into the store."""
+            # Potential-based reward-shaping bookkeeping (backend-only,
+            # never surfaced to the agent -- see fle.disruptions.scoring
+            # .recovery_potential / shaped_reward_delta). One running
+            # account per active fire: a later "fired" event with a
+            # different fire_tick resets shaped_prev_tick to that new
+            # fire_tick (Phi(fire_tick) is always 0 by construction, so this
+            # reproduces "phi_prev starts at 0" without a separately stored
+            # scalar) so one fire's account cannot bleed into the next.
+            shaped_rewards: List[dict] = []
+            shaped_fire_tick: Optional[int] = None
+            shaped_prev_tick: Optional[int] = None
+
+            def update_shaped_reward() -> Optional[dict]:
+                nonlocal shaped_fire_tick, shaped_prev_tick
+                if not samples:
+                    return None
+                fires = [e for e in data.ledger_events if e.get("event") == "fired"]
+                if not fires:
+                    return None
+                fire_tick = int(fires[-1].get("tick", 0))
+                tick = samples[-1]["tick"]
+                if fire_tick != shaped_fire_tick:
+                    shaped_fire_tick = fire_tick
+                    shaped_prev_tick = fire_tick
+                delta = shaped_reward_delta(
+                    samples,
+                    fle_task.quota_item,
+                    shaped_fire_tick,
+                    shaped_prev_tick,
+                    tick,
+                )
+                phi = recovery_potential(
+                    samples, fle_task.quota_item, shaped_fire_tick, tick
+                )
+                shaped_prev_tick = tick
+                entry = {
+                    "tick": tick,
+                    "fire_tick": shaped_fire_tick,
+                    "phi": phi,
+                    "delta": delta,
+                }
+                shaped_rewards.append(entry)
+                data.shaped_rewards = list(shaped_rewards)
+                return entry
+
+            def drain() -> Optional[dict]:
+                """Incrementally drain engine samples + events into the
+                store; returns this drain's shaped-reward entry (or None)
+                for the trajectory writer."""
                 try:
                     new = engine.samples(
                         since_tick=samples[-1]["tick"] if samples else 0
@@ -216,8 +275,32 @@ def wrench_solver():
                     data.ledger_events = [
                         e.model_dump() for e in fle_task.ledger.read()
                     ]
+                    return update_shaped_reward()
                 except Exception as drain_err:
                     logger.warning(f"WRENCH drain failed: {drain_err}")
+                    return None
+
+            def log_trajectory_step(
+                step_idx: int,
+                code: str,
+                response: str,
+                shaped_entry: Optional[dict],
+            ) -> None:
+                """Append one JSONL trajectory record, when
+                WRENCH_TRAJECTORY_DIR opted a writer in. No-op otherwise."""
+                if writer is None:
+                    return
+                try:
+                    writer.append_step(
+                        step_idx,
+                        code,
+                        response,
+                        samples[-1]["tick"] if samples else 0,
+                        samples[-1]["counts"] if samples else {},
+                        shaped_reward=shaped_entry,
+                    )
+                except Exception as traj_err:
+                    logger.warning(f"WRENCH trajectory append failed: {traj_err}")
 
             feedback = (
                 "The map is empty. Analyze the current game state and begin "
@@ -235,6 +318,7 @@ def wrench_solver():
                 # game-state dump) and inflate cost for the rest of the run.
                 if len(state.messages) > 25 and state.messages[0].role == "system":
                     state.messages = [state.messages[0]] + state.messages[-24:]
+                current_code = ""
                 try:
                     observation: Observation = gym_env.get_observation()
                     obs_text = (
@@ -288,7 +372,7 @@ def wrench_solver():
                                 content="[generation failed this step]"
                             )
                         )
-                        drain()
+                        log_trajectory_step(step, current_code, feedback, drain())
                         continue
                     if not state.output.choices:
                         # A reasoning-heavy model can burn its whole
@@ -332,7 +416,7 @@ def wrench_solver():
                                 content="[no output produced this step]"
                             )
                         )
-                        drain()
+                        log_trajectory_step(step, current_code, feedback, drain())
                         continue
                     state.messages.append(state.output.message)
 
@@ -342,9 +426,10 @@ def wrench_solver():
                             "Your reply contained no ```python block. Reply "
                             "with exactly one code block."
                         )
-                        drain()
+                        log_trajectory_step(step, current_code, feedback, drain())
                         continue
 
+                    current_code = program.code
                     try:
                         obs, reward, terminated, truncated, info = gym_env.step(
                             Action(agent_idx=0, code=program.code)
@@ -352,10 +437,10 @@ def wrench_solver():
                     except Exception as env_err:
                         logger.warning(f"Environment error: {env_err}")
                         feedback = f"Environment error: {env_err}"
-                        drain()
+                        log_trajectory_step(step, current_code, feedback, drain())
                         continue
 
-                    drain()
+                    shaped_entry = drain()
                     steps_completed += 1
                     data.steps_completed = steps_completed
 
@@ -370,6 +455,7 @@ def wrench_solver():
                         f"**Program Output (STDOUT/STDERR):**\n"
                         f"```\n{program_output}\n```"
                     )
+                    log_trajectory_step(step, current_code, feedback, shaped_entry)
 
                     if terminated:
                         # Quota met at this step's verification. Do NOT end
@@ -422,6 +508,26 @@ def wrench_solver():
                 model=metadata.get("model", "unknown"),
             )
         finally:
+            if writer is not None:
+                try:
+                    writer.finalize(
+                        {
+                            "task_key": task_key,
+                            "seed_offset": seed_offset,
+                            "steps_completed": data.steps_completed,
+                            "quota_met": data.quota_met,
+                            "num_fires": len(
+                                [
+                                    e
+                                    for e in data.ledger_events
+                                    if e.get("event") == "fired"
+                                ]
+                            ),
+                            "error": data.error or None,
+                        }
+                    )
+                except Exception as finalize_err:
+                    logger.error(f"Error finalizing trajectory: {finalize_err}")
             if instance is not None:
                 try:
                     instance.cleanup()

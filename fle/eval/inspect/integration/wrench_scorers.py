@@ -59,6 +59,12 @@ class WrenchData(StoreModel):
     steps_completed: int = Field(default=0)
     quota_met: bool = Field(default=False)
     error: str = Field(default="")
+    # Dense per-step potential-based reward-shaping signal (see
+    # fle.disruptions.scoring.recovery_potential / shaped_reward_delta),
+    # accumulated incrementally by wrench_solver()'s drain() closure. Purely
+    # additive: no existing scorer reads this field, and it is never
+    # surfaced to the agent. Each entry is {tick, fire_tick, phi, delta}.
+    shaped_rewards: List[dict] = Field(default_factory=list)
 
 
 def _fires(data: WrenchData) -> List[dict]:

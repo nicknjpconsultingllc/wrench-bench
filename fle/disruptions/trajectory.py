@@ -27,6 +27,7 @@ class TrajectoryWriter:
         response: str,
         game_tick: int,
         produced_counts: dict | None = None,
+        shaped_reward: dict | None = None,
     ) -> None:
         record = {
             "step_index": step_index,
@@ -35,6 +36,13 @@ class TrajectoryWriter:
             "game_tick": game_tick,
             "produced_counts": produced_counts or {},
         }
+        # Optional dense reward-shaping entry (see
+        # fle.disruptions.scoring.recovery_potential / shaped_reward_delta).
+        # Omitted from the record entirely when absent, so existing callers
+        # (wrench_pilot.py, tests/wrench/test_trajectory.py) that never pass
+        # it see byte-for-byte identical records to before.
+        if shaped_reward is not None:
+            record["shaped_reward"] = shaped_reward
         with self.path.open("a") as f:
             f.write(json.dumps(record) + "\n")
 
