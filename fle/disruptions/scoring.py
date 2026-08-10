@@ -586,24 +586,83 @@ def detection_counts(
     episodes and seeds (sum numerators / sum denominators) instead of
     averaging per-episode ratios.
 
-    Diminishing returns on report volume: ``matched_reports`` and
-    ``matched_reports_strict`` are CREDITED match counts, capped at ONE
-    credit per fired event (the earliest matching report), not a raw count
-    of every report that happens to match. ``num_reports`` stays the true,
-    uncapped report volume. ``report_fault`` is a free, unmetered no-op
-    tool (see ``fle.env.tools.agent.report_fault`` and
+    Diminishing returns on report volume, enforced via BIPARTITE matching
+    between fired events and reports -- capped on BOTH sides at once:
+
+    - Per fire: at most ONE credited report per fired event (the earliest
+      still-available matching report), so resubmitting the same accurate
+      report N times cannot multiply that one fire's credit.
+    - Per report: once a report has been credited to some fire, it is
+      removed from the candidate pool and cannot ALSO credit a different
+      fire. WRENCH's factories are compact enough that a single accurate
+      report can legitimately sit within ``radius`` of more than one fired
+      event's affected position (e.g. ``iron_plate_sentinel`` firing both
+      ``entity_destruction`` and ``belt_cut`` in one episode); without this
+      side of the cap that one report would be credited to every fire it
+      happens to be near, letting ``matched_reports`` exceed ``num_reports``
+      and ``detection_metrics``'s ``precision`` exceed 1.0.
+
+    Both halves of the cap are needed together: the per-fire half alone
+    stops spamming one fire with duplicate reports but does nothing to stop
+    one report from being reused across several DIFFERENT fires; the
+    per-report half alone (without also capping at one per fire) would
+    still let ten duplicate reports for the same fire each claim it. Fires
+    are resolved in the order given in ``fire_events``, each taking the
+    earliest-tick, not-yet-consumed report that matches it -- so an earlier
+    fire has first claim on a report it shares with a later one.
+    ``num_reports`` stays the true, uncapped report volume throughout.
+
+    The loose (``radius``) and strict (``min(3.0, radius)``) passes each
+    run their OWN independent bipartite consumption: a report can be
+    strict-radius-close to one fire and only loose-radius-close to
+    another, and each pass resolves that on its own terms, so
+    ``matched_reports`` and ``matched_reports_strict`` are not required to
+    agree on which report was credited to which fire.
+
+    By construction, ``matched_reports <= min(num_fires, num_reports)`` and
+    ``matched_reports_strict <= min(num_fires, num_reports)`` always hold:
+    each pass increments its counter at most once per iteration of the
+    ``for fire in fire_events`` loop (bounding it by ``num_fires``), and
+    only when consuming a not-yet-seen report index into that pass's own
+    ``consumed`` set, which can never grow past ``num_reports`` elements
+    (bounding it by ``num_reports`` too).
+
+    ``matched_fires`` is a different question -- "was this fire ever
+    reported at all" for recall -- and is intentionally NOT run through the
+    same consumption accounting: it counts a fire as matched whenever ANY
+    report (from the full, unconsumed pool) is within ``radius``,
+    regardless of whether that same report was also claimed by another
+    fire's credit. A report count of 1 can therefore still leave every fire
+    it is near marked as "matched" for recall purposes even though only one
+    of them can walk away with the (scarcer) precision credit.
+
+    ``latencies`` follows the credit accounting, not the recall accounting:
+    an entry is only appended when a fire wins a report in the loose-radius
+    consumption pass above, so ``len(latencies) <= matched_fires`` in the
+    shared-report case (a fire "matched" for recall via an already-consumed
+    report contributes no latency entry). This is deliberate, not a gap:
+    reusing an already-consumed report's tick as a second fire's latency
+    would double-count that one detection event's timing as if it
+    independently explained two fires. Callers already treat ``latencies``
+    as self-contained (its own ``len()`` is the denominator for any mean,
+    never ``matched_fires`` -- see ``wrench_scorers.py``'s
+    ``detection_scorer`` and ``run_table.py``'s aggregation), so this holds
+    without requiring any downstream change.
+
+    ``report_fault`` is a free, unmetered no-op tool (see
+    ``fle.env.tools.agent.report_fault`` and
     ``fle.eval.tasks.observability_budget.DEFAULT_METERED_TOOLS``) that
-    costs only one of an agent's ~32-48 trajectory steps, so without this
-    cap a policy could resubmit the same accurate report, or sweep a small
-    fixed set of positions it already knows about (e.g. every entity it has
-    ever placed), and be scored identically to a single genuine detection.
-    Measured live (tests/wrench/test_detection_gaming.py): 10 identical,
-    accurate report_fault calls at a 250-tick cadence against one fired
-    event previously produced matched_reports=10 -- precision=1.0, exactly
-    like a lone accurate report. Capping credit to the earliest match per
-    fire while leaving ``num_reports`` uncapped makes report volume
-    directly suppress precision (measured ~0.1 for that same 10-report
-    sweep post-fix).
+    costs only one of an agent's ~32-48 trajectory steps, so without the
+    per-fire cap a policy could resubmit the same accurate report, or sweep
+    a small fixed set of positions it already knows about (e.g. every
+    entity it has ever placed), and be scored identically to a single
+    genuine detection. Measured live (tests/wrench/test_detection_gaming.py):
+    10 identical, accurate report_fault calls at a 250-tick cadence against
+    one fired event previously produced matched_reports=10 -- precision=1.0,
+    exactly like a lone accurate report. Capping credit to the earliest
+    match per fire while leaving ``num_reports`` uncapped makes report
+    volume directly suppress precision (measured ~0.1 for that same
+    10-report sweep post-fix).
     """
     reports = [e for e in ledger_entries if _get(e, "event") == "report_fault"]
     report_info = [(int(_get(r, "tick", 0)), _report_position(r)) for r in reports]
@@ -616,8 +675,16 @@ def detection_counts(
     matched_fires = 0
     matched_reports = 0
     matched_reports_strict = 0
+    # Which report indices have already been spent as credit, tracked
+    # separately per radius pass -- see the docstring's "independent
+    # bipartite consumption" note.
+    consumed_loose = set()
+    consumed_strict = set()
     for fire in fire_events:
         fire_tick = int(_get(fire, "tick", 0))
+
+        # Recall bookkeeping: was this fire reported at all? Deliberately
+        # NOT scoped to `consumed_loose` -- see the docstring.
         matching_ticks = [
             tick
             for tick, pos in report_info
@@ -625,10 +692,31 @@ def detection_counts(
         ]
         if matching_ticks:
             matched_fires += 1
+
+        # Precision credit: at most one, and only from reports not already
+        # spent on an earlier fire.
+        loose_candidates = [
+            (tick, idx)
+            for idx, (tick, pos) in enumerate(report_info)
+            if idx not in consumed_loose and _matches(tick, pos, fire, radius)
+        ]
+        if loose_candidates:
+            earliest_tick, earliest_idx = min(loose_candidates)
             matched_reports += 1  # capped: only the earliest match is credited
-            latencies.append(min(matching_ticks) - fire_tick)
-        if any(_matches(tick, pos, fire, strict_radius) for tick, pos in report_info):
+            consumed_loose.add(earliest_idx)  # ...and it can't be spent again
+            latencies.append(earliest_tick - fire_tick)
+
+        # Same idea at the strict radius, with its own independent pool.
+        strict_candidates = [
+            (tick, idx)
+            for idx, (tick, pos) in enumerate(report_info)
+            if idx not in consumed_strict
+            and _matches(tick, pos, fire, strict_radius)
+        ]
+        if strict_candidates:
+            _, earliest_strict_idx = min(strict_candidates)
             matched_reports_strict += 1  # ditto, at the strict radius
+            consumed_strict.add(earliest_strict_idx)
 
     return {
         "latencies": latencies,
