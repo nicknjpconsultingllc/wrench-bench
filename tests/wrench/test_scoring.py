@@ -6,11 +6,14 @@ from fle.disruptions.ledger import LedgerEntry
 from fle.disruptions.scoring import (
     detection_counts,
     detection_metrics,
+    floor_adjusted_throughput_retained,
+    floor_adjusted_throughput_retained_parts,
     frozen_baseline,
     recovery_at,
     recovery_potential,
     shaped_reward_delta,
     throughput_retained,
+    throughput_retained_parts,
     throughput_series,
     time_to_recovery,
     time_to_recovery_parts,
@@ -136,6 +139,235 @@ class TestThroughputRetained:
 
     def test_no_samples_returns_none(self):
         assert throughput_retained([], "iron-plate", FIRE_TICK, 3600) is None
+
+
+def _fire_event(kind="entity_destruction", same_type_total=2, tick=FIRE_TICK, name="stone-furnace"):
+    """A minimal ledger 'fired' entry carrying the redundancy count
+    server.lua's KINDS.entity_destruction stashes on its manifest entry
+    (fle/env/tools/admin/inject_disruption/server.lua). Mirrors the real
+    shape LedgerEntry actually produces: ``affected`` is a top-level field
+    (never routed through ``detail``) -- see
+    fle.disruptions.scoring._redundancy_total's docstring. Pass
+    ``same_type_total=None`` to build a fire event missing the field
+    entirely (simulating older ledger data / a kind that never sets it)."""
+    entry = {"name": name, "x": 0.0, "y": 0.0}
+    if same_type_total is not None:
+        entry["same_type_total"] = same_type_total
+    return LedgerEntry(tick=tick, event="fired", kind=kind, seed=0, affected=[entry])
+
+
+class TestFloorAdjustedThroughputRetained:
+    """floor_adjusted_throughput_retained[_parts]: fixes the gap where a
+    no-op agent with 2 identical furnaces (1 killed) scores plain TR ~= 0.5
+    instead of ~= 0, by subtracting a floor anchored to the redundancy count
+    frozen at fire time (server.lua's same_type_total, counted BEFORE
+    e.die())."""
+
+    def test_no_redundancy_reduces_to_plain_tr(self, drop_and_recovery):
+        """Single point of failure (same_type_total=1): floor == 0 exactly,
+        so the floor-adjusted parts/scalar must equal the plain TR output
+        EXACTLY -- the reduction property the design calls out as
+        load-bearing, not incidental."""
+        fire = _fire_event(same_type_total=1)
+        plain_parts = throughput_retained_parts(
+            drop_and_recovery, "iron-plate", FIRE_TICK, 3600
+        )
+        adjusted_parts = floor_adjusted_throughput_retained_parts(
+            drop_and_recovery, "iron-plate", FIRE_TICK, 3600, fire
+        )
+        assert adjusted_parts == plain_parts
+        assert floor_adjusted_throughput_retained(
+            drop_and_recovery, "iron-plate", FIRE_TICK, 3600, fire
+        ) == throughput_retained(drop_and_recovery, "iron-plate", FIRE_TICK, 3600)
+
+    def test_noop_with_redundancy_scores_near_zero(self):
+        """Two furnaces, one destroyed, agent does nothing: real production
+        settles at the surviving half (~0.5x baseline) -- exactly the
+        passive-redundancy floor -- so floor-adjusted TR must be ~0, unlike
+        plain TR, which stays stuck near 0.5 (the gap this feature fixes)."""
+        samples = make_samples([(FIRE_TICK, 40.0), (3600, 20.0)])
+        fire = _fire_event(same_type_total=2)
+        tr_adj = floor_adjusted_throughput_retained(
+            samples, "iron-plate", FIRE_TICK, 3600, fire
+        )
+        assert tr_adj == pytest.approx(0.0, abs=0.05)
+        # Contrast: plain (unadjusted) TR is still ~0.5 here -- the gap
+        # being fixed by this feature.
+        assert throughput_retained(
+            samples, "iron-plate", FIRE_TICK, 3600
+        ) == pytest.approx(0.5, abs=0.05)
+
+    def test_full_repair_scores_near_one(self):
+        """Oracle repair back to the full baseline rate: floor-adjusted TR
+        must be ~= 1 (the agent's own recovery covers the whole gap above
+        the passive-redundancy floor)."""
+        samples = make_samples([(FIRE_TICK + 7200, 40.0)])
+        fire = _fire_event(same_type_total=2)
+        tr_adj = floor_adjusted_throughput_retained(
+            samples, "iron-plate", FIRE_TICK, 3600, fire
+        )
+        assert tr_adj == pytest.approx(1.0, abs=0.05)
+
+    def test_non_entity_destruction_kind_is_none(self, drop_and_recovery):
+        # Deliberate v1 scope limit: only entity_destruction has a cheap
+        # redundancy count. belt_cut/resource_exhaustion/adaptive_strike
+        # must return None even if same_type_total happens to be present.
+        for kind in ("belt_cut", "resource_exhaustion", "adaptive_strike"):
+            fire = _fire_event(kind=kind, same_type_total=2)
+            assert (
+                floor_adjusted_throughput_retained_parts(
+                    drop_and_recovery, "iron-plate", FIRE_TICK, 3600, fire
+                )
+                is None
+            )
+
+    def test_missing_redundancy_field_is_none(self, drop_and_recovery):
+        fire = _fire_event(same_type_total=None)
+        assert (
+            floor_adjusted_throughput_retained_parts(
+                drop_and_recovery, "iron-plate", FIRE_TICK, 3600, fire
+            )
+            is None
+        )
+
+    def test_empty_affected_is_none(self, drop_and_recovery):
+        fire = LedgerEntry(
+            tick=FIRE_TICK, event="fired", kind="entity_destruction", seed=0, affected=[]
+        )
+        assert (
+            floor_adjusted_throughput_retained_parts(
+                drop_and_recovery, "iron-plate", FIRE_TICK, 3600, fire
+            )
+            is None
+        )
+
+    def test_degenerate_baseline_is_none(self):
+        samples = make_samples([(FIRE_TICK, 0.0), (3600, 40.0)])
+        fire = _fire_event(same_type_total=2)
+        assert (
+            floor_adjusted_throughput_retained_parts(
+                samples, "iron-plate", FIRE_TICK, 3600, fire
+            )
+            is None
+        )
+
+
+class TestFloorAdjustedClosesSelfSabotageExploit:
+    """The load-bearing test for this feature: proves the redundancy floor
+    -- anchored to data fixed the instant the disruption fires (server.lua
+    counts same_type_total BEFORE e.die()) -- cannot be manipulated by the
+    agent's own post-fire behavior.
+
+    An earlier design attempt inferred the floor from wherever post-fire
+    production plateaus. It was adversarially rejected because an agent
+    could self-sabotage (deconstruct/depower the survivor) right after the
+    fire to manufacture an artificially low observed floor, then "recover"
+    from its own self-inflicted damage to collect free credit. These tests
+    prove the shipped design closes that exploit: the floor -- and hence the
+    adjusted score -- depends only on the fire event's frozen redundancy
+    count and the true endpoints of production, never on the shape of the
+    post-fire curve in between.
+    """
+
+    def test_floor_is_invariant_to_post_fire_sample_shape(self):
+        # Same pre-fire baseline (40/min) and same redundancy (2 furnaces,
+        # one destroyed) in both cases. Both end at the IDENTICAL cumulative
+        # production over the 3600-tick horizon (20 items -- half of the
+        # 40-item expected baseline): the agent genuinely earned the exact
+        # same amount of real recovered production in both cases.
+        #
+        # "clean": steady half-rate the whole horizon (no sabotage).
+        horizon = 3600
+        half = 1800
+        clean = make_samples([(FIRE_TICK, 40.0), (horizon, 20.0)])
+        # "sabotage": production craters to 0 for the first half of the
+        # horizon (as if the agent deconstructed the survivor right after
+        # the fire), then spikes to full rate for the second half, landing
+        # at (approximately -- see the tolerance note below) the same final
+        # cumulative total as "clean".
+        sabotage = make_samples([(FIRE_TICK, 40.0), (half, 0.0), (half, 40.0)])
+        fire = _fire_event(same_type_total=2)
+
+        clean_parts = floor_adjusted_throughput_retained_parts(
+            clean, "iron-plate", FIRE_TICK, horizon, fire
+        )
+        sabotage_parts = floor_adjusted_throughput_retained_parts(
+            sabotage, "iron-plate", FIRE_TICK, horizon, fire
+        )
+        assert clean_parts is not None and sabotage_parts is not None
+        # Both actual AND floor-adjusted-expected match, up to the sample
+        # grid's own quantization noise (make_samples steps in fixed
+        # 41-tick increments, so a piecewise-linear curve with an extra
+        # segment boundary -- the sabotage dip -- lands within a fraction of
+        # an item of the single-segment "clean" curve's true integral, not
+        # bit-for-bit identical). That noise floor is <0.5 items on a
+        # ~20-item actual and, in ratio terms, ~0.014 -- roughly 35x smaller
+        # than the ~0.49 ratio gap the next test shows a plateau-based floor
+        # would have handed the saboteur. The noise here is a sampling
+        # artifact of the synthetic fixture, not the effect under test.
+        assert clean_parts[0] == pytest.approx(sabotage_parts[0], abs=0.5)
+        assert clean_parts[1] == pytest.approx(sabotage_parts[1], abs=0.5)
+
+        clean_tr = floor_adjusted_throughput_retained(
+            clean, "iron-plate", FIRE_TICK, horizon, fire
+        )
+        sabotage_tr = floor_adjusted_throughput_retained(
+            sabotage, "iron-plate", FIRE_TICK, horizon, fire
+        )
+        assert clean_tr == pytest.approx(sabotage_tr, abs=0.02)
+        # Neither ever exceeded the passive-redundancy floor, so both
+        # correctly land at "no genuine recovery credit" -- 0 -- despite the
+        # sabotage dip.
+        assert clean_tr == pytest.approx(0.0, abs=0.05)
+
+    def test_a_plateau_based_floor_would_have_rewarded_the_sabotage(self):
+        """Illustrative contrast, not exercising production code: shows the
+        REJECTED design (floor = wherever post-fire production plateaus,
+        approximated here as its own observed minimum trailing rate,
+        integrated over the horizon) WOULD have scored the self-sabotage
+        trajectory materially higher than the clean one, despite both
+        delivering identical real recovered production -- precisely the
+        exploit this feature's actual design closes (see the test above,
+        where the two trajectories score identically)."""
+        horizon = 3600
+        half = 1800
+        clean = make_samples([(FIRE_TICK, 40.0), (horizon, 20.0)])
+        sabotage = make_samples([(FIRE_TICK, 40.0), (half, 0.0), (half, 40.0)])
+
+        def naive_plateau_adjusted_tr(samples):
+            plain = throughput_retained_parts(
+                samples, "iron-plate", FIRE_TICK, horizon
+            )
+            actual, expected = plain
+            post = [s for s in samples if s["tick"] >= FIRE_TICK]
+            series = throughput_series(post, "iron-plate", window_ticks=900)
+            min_rate = min((r for _, r in series), default=0.0)
+            naive_floor = min_rate * horizon / 3600.0
+            denom = expected - naive_floor
+            if denom <= 0:
+                return None
+            return (actual - naive_floor) / denom
+
+        naive_clean = naive_plateau_adjusted_tr(clean)
+        naive_sabotage = naive_plateau_adjusted_tr(sabotage)
+        assert naive_clean is not None and naive_sabotage is not None
+        # The rejected design rewards the sabotage trajectory strictly more,
+        # even though real recovered production was (near-)identical: the
+        # exploit. Measured: naive_clean ~= 0.01, naive_sabotage ~= 0.50 --
+        # self-sabotage alone buys ~0.49 of free credit under that design.
+        assert naive_sabotage > naive_clean + 0.1
+
+        # ...while this feature's actual floor_adjusted_throughput_retained
+        # gives them (up to the ~0.014 sampling noise quantified in the test
+        # above) the identical, non-inflated score.
+        fire = _fire_event(same_type_total=2)
+        real_clean = floor_adjusted_throughput_retained(
+            clean, "iron-plate", FIRE_TICK, horizon, fire
+        )
+        real_sabotage = floor_adjusted_throughput_retained(
+            sabotage, "iron-plate", FIRE_TICK, horizon, fire
+        )
+        assert real_clean == pytest.approx(real_sabotage, abs=0.02)
 
 
 class TestRecoveryAt:

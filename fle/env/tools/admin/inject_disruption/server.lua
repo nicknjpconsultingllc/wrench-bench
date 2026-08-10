@@ -53,7 +53,16 @@ KINDS.entity_destruction = function(spec)
     local idx = seeded_index(spec.seed, #es)
     if not idx then return nil, "no matching entity", true end
     local e = es[idx]
+    -- Redundancy count fixed at fire time, before e.die(): how many entities
+    -- in the candidate list share this one's name. Non-manipulable by the
+    -- agent (computed before it can react) -- feeds the floor-adjusted TR in
+    -- fle/disruptions/scoring.py (floor_adjusted_throughput_retained_parts).
+    local same_type_total = 0
+    for _, other in pairs(es) do
+        if other.name == e.name then same_type_total = same_type_total + 1 end
+    end
     local m = manifest_entry(e)
+    m.same_type_total = same_type_total
     e.die()  -- leaves remnants + spills contents: permanent but observable
     return { m }
 end
