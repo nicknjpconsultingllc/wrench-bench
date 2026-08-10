@@ -787,3 +787,66 @@ class TestDetectionMetrics:
         m = detection_metrics(ledger, [fire1, fire2])
         assert m["precision"] == 1.0
         assert m["recall"] == 1.0
+
+    def test_one_report_cannot_be_double_credited_across_two_fires(self):
+        # The bipartite-matching bug this class was written to catch: a
+        # single accurate report can legitimately sit within `radius` of
+        # TWO different fired events' affected positions at once (WRENCH's
+        # factories are compact -- e.g. iron_plate_sentinel firing both
+        # entity_destruction and belt_cut in one episode). Before the
+        # per-report cap, that one report got credited to BOTH fires,
+        # letting matched_reports (2) exceed num_reports (1) and
+        # detection_metrics' precision exceed 1.0 -- a nonsensical value
+        # that flowed straight into wrench_scorers.py's scorer metadata.
+        fire1 = fired(6000, [{"name": "stone-furnace", "x": 2.0, "y": 0.0}])
+        fire2 = fired(6500, [{"name": "stone-furnace", "x": 2.5, "y": 0.0}])
+        rep = report(7000, 2.0, 0.0)  # one report, near both fires
+        c = detection_counts([fire1, fire2, rep], [fire1, fire2])
+        # Capped at 1 (min(num_fires=2, num_reports=1)), not 2.
+        assert c["matched_reports"] == 1
+        assert c["matched_reports_strict"] == 1
+        assert c["num_reports"] == 1
+        # Both fires were still genuinely near a report -- recall is
+        # unaffected by the scarcer precision credit being spent once.
+        assert c["matched_fires"] == 2
+        m = detection_metrics([fire1, fire2, rep], [fire1, fire2])
+        assert m["precision"] == 1.0  # not 2.0
+        assert m["precision_strict"] == 1.0
+        assert m["recall"] == 1.0
+
+    def test_two_fires_two_reports_each_near_only_its_own_fire(self):
+        # Guards against over-correction: the per-report cap must not start
+        # under-crediting genuinely distinct detections. Two fires, two
+        # reports, each report close to only its own fire -> both credited.
+        fire1 = fired(6000, [{"name": "stone-furnace", "x": 0.0, "y": 0.0}])
+        fire2 = fired(6500, [{"name": "stone-furnace", "x": 100.0, "y": 0.0}])
+        rep1 = report(6100, 0.0, 0.0)      # close to fire1 only
+        rep2 = report(6600, 100.0, 0.0)    # close to fire2 only
+        c = detection_counts([fire1, fire2, rep1, rep2], [fire1, fire2])
+        assert c["matched_reports"] == 2
+        assert c["matched_reports_strict"] == 2
+        m = detection_metrics([fire1, fire2, rep1, rep2], [fire1, fire2])
+        assert m["precision"] == 1.0
+        assert m["recall"] == 1.0
+
+    def test_shared_report_plus_dedicated_report_credits_both_fires(self):
+        # Harder bipartite case: one report matches BOTH fires, and a
+        # second report matches only one of them (with an earlier tick, so
+        # it is the earliest available match for its fire). The dedicated
+        # report is consumed by its own fire first, freeing the shared
+        # report to be consumed by the other fire -- exactly one report
+        # credited per fire, neither report double-counted, and
+        # matched_reports stays <= num_reports throughout.
+        fire1 = fired(6000, [{"name": "stone-furnace", "x": 0.0, "y": 0.0}])
+        fire2 = fired(6500, [{"name": "stone-furnace", "x": 1.0, "y": 0.0}])
+        dedicated = report(6600, 0.0, 0.0)  # matches fire1 only, earlier tick
+        shared = report(7000, 0.5, 0.0)     # matches both fire1 and fire2
+        ledger = [fire1, fire2, dedicated, shared]
+        c = detection_counts(ledger, [fire1, fire2])
+        assert c["num_reports"] == 2
+        assert c["matched_reports"] == 2
+        assert c["matched_reports"] <= c["num_reports"]
+        assert c["matched_reports"] <= min(c["num_fires"], c["num_reports"])
+        m = detection_metrics(ledger, [fire1, fire2])
+        assert m["precision"] == 1.0
+        assert m["recall"] == 1.0
