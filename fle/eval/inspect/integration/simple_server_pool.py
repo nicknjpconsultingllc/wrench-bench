@@ -11,6 +11,27 @@ from typing import Optional, List, Tuple
 
 logger = logging.getLogger(__name__)
 
+# How long get_run_idx()/get_server_allocation() will wait for a free slot
+# before concluding something is genuinely stuck (not just busy) and raising.
+# Calibrated against REAL observed episode duration, not just a single
+# step's worst-case retry budget: the first real 18-episode published-table
+# grid (3 models x 3 tasks x 2 seeds, max_samples=3) measured real
+# successful-episode durations of 929-1581s (~15.5-26.3 min) each. At 3
+# concurrent slots for 18 episodes, that's up to 6 sequential waves -- a
+# sample queued behind several already-running waves can legitimately need
+# to wait multiple episode-durations' worth of time for a slot, which
+# regularly exceeds a 900s (15 min) timeout under completely healthy
+# conditions. The original 900s value was calibrated against
+# wrench.py's per-step generate() retry budget (5 retries x 180s = 900s
+# worst case for ONE step), not against total oversubscribed-queue wait --
+# a mismatch that cost 15 of 18 real, paid episodes in that grid to this
+# exact false-positive "stuck" determination, despite nothing actually being
+# stuck. There's no real cost to a generous bound here: the only purpose of
+# a finite timeout at all is to eventually flag a TRUE permanent hang (e.g.
+# a leaked allocation that's never released), not to enforce a queue-depth
+# SLA -- a slow, correct detection beats a fast, wrong one.
+POOL_WAIT_TIMEOUT_SECONDS = 14400  # 4 hours
+
 
 @dataclass
 class ServerAllocation:
@@ -127,14 +148,15 @@ class SimpleServerPool:
 
         try:
             run_idx = await asyncio.wait_for(
-                self.available_indices.get(), timeout=900
+                self.available_indices.get(), timeout=POOL_WAIT_TIMEOUT_SECONDS
             )
         except asyncio.TimeoutError:
             raise RuntimeError(
-                f"Timed out after 900s waiting for a free server slot "
-                f"(all {self.max_servers} in use). This means something is "
-                f"genuinely stuck, not just busy -- a released run_idx should "
-                f"free a slot well within this window."
+                f"Timed out after {POOL_WAIT_TIMEOUT_SECONDS}s waiting for a "
+                f"free server slot (all {self.max_servers} in use). This "
+                f"means something is genuinely stuck, not just busy -- a "
+                f"released run_idx should free a slot well within this "
+                f"window."
             )
         self.allocated_indices.add(run_idx)
 
@@ -159,14 +181,15 @@ class SimpleServerPool:
         # concurrency, not an error condition.
         try:
             run_idx = await asyncio.wait_for(
-                self.available_indices.get(), timeout=900
+                self.available_indices.get(), timeout=POOL_WAIT_TIMEOUT_SECONDS
             )
         except asyncio.TimeoutError:
             raise RuntimeError(
-                f"Timed out after 900s waiting for a free server slot "
-                f"(all {self.max_servers} in use). This means something is "
-                f"genuinely stuck, not just busy -- a released run_idx should "
-                f"free a slot well within this window."
+                f"Timed out after {POOL_WAIT_TIMEOUT_SECONDS}s waiting for a "
+                f"free server slot (all {self.max_servers} in use). This "
+                f"means something is genuinely stuck, not just busy -- a "
+                f"released run_idx should free a slot well within this "
+                f"window."
             )
         self.allocated_indices.add(run_idx)
 
