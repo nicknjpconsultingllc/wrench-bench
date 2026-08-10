@@ -120,6 +120,8 @@ def collect_episode_rows(logs):
             latencies = det_meta.get("latencies") or []
             ep_tr_num = tr_meta.get("pooled_numerator", 0.0)
             ep_tr_den = tr_meta.get("pooled_denominator", 0.0)
+            ep_floor_num = tr_meta.get("floor_adjusted_pooled_numerator", 0.0)
+            ep_floor_den = tr_meta.get("floor_adjusted_pooled_denominator", 0.0)
             rows.append(
                 {
                     "model": model,
@@ -144,6 +146,22 @@ def collect_episode_rows(logs):
                     ),
                     "tr_numerator": ep_tr_num,
                     "tr_denominator": ep_tr_den,
+                    # Redundancy-floor-adjusted TR (see
+                    # fle/disruptions/scoring.py
+                    # floor_adjusted_throughput_retained_parts): additive
+                    # alongside TR/TR (raw) above, never replacing them.
+                    # Only defined for entity_destruction fires carrying a
+                    # same_type_total redundancy count -- None when the
+                    # episode has no such fire (e.g. nothing armed, or only
+                    # other disruption kinds), matching the None policy the
+                    # plain TR columns already use.
+                    "throughput_retained_floor_adj": (
+                        winsorize_tr(ep_floor_num / ep_floor_den)
+                        if ep_floor_den > 0
+                        else None
+                    ),
+                    "tr_floor_numerator": ep_floor_num,
+                    "tr_floor_denominator": ep_floor_den,
                     "recovery_rate": rec_value,
                     "recovered": rec_meta.get("recovered", 0),
                     "scoreable_fires": rec_meta.get("scoreable_fires", 0),
@@ -178,6 +196,8 @@ def aggregate_rows(rows):
         ok = [e for e in episodes if e["status"] == "success"]
         tr_num = sum(e["tr_numerator"] for e in ok)
         tr_den = sum(e["tr_denominator"] for e in ok)
+        tr_floor_num = sum(e["tr_floor_numerator"] for e in ok)
+        tr_floor_den = sum(e["tr_floor_denominator"] for e in ok)
         recovered = sum(e["recovered"] for e in ok)
         scoreable = sum(e["scoreable_fires"] for e in ok)
         matched_reports = sum(e["matched_reports"] for e in ok)
@@ -205,6 +225,18 @@ def aggregate_rows(rows):
                 ),
                 "tr_numerator": tr_num,
                 "tr_denominator": tr_den,
+                # Redundancy-floor-adjusted TR, pooled across episodes the
+                # same sum-numerator/sum-denominator way as TR/TR (raw)
+                # above -- see the per-episode comment in
+                # collect_episode_rows and
+                # fle/disruptions/scoring.py:floor_adjusted_throughput_retained_parts.
+                "throughput_retained_floor_adj": (
+                    winsorize_tr(tr_floor_num / tr_floor_den)
+                    if tr_floor_den > 0
+                    else None
+                ),
+                "tr_floor_numerator": tr_floor_num,
+                "tr_floor_denominator": tr_floor_den,
                 "recovery_rate": recovered / scoreable if scoreable else None,
                 "recovered": recovered,
                 "scoreable_fires": scoreable,
@@ -242,18 +274,25 @@ def write_markdown(path: Path, aggregates, rows, args):
         "that clamp -- it can exceed 1.5 when recovery dramatically",
         "overbuilds past the pre-disruption baseline, which TR alone cannot",
         "show once it pegs at the cap (docs/failure_taxonomy.md finding V4).",
+        "TR (floor-adj) subtracts a passive-redundancy floor (fixed at fire",
+        "time, non-manipulable -- see",
+        "fle/disruptions/scoring.py:floor_adjusted_throughput_retained_parts)",
+        "from both TR's numerator and denominator, isolating the agent's own",
+        "recovery contribution. Only defined for entity_destruction fires; `-`",
+        "elsewhere (e.g. no entity_destruction fire this episode/group).",
         "",
         "## Per-(model, task) aggregates",
         "",
-        "| Model | Task | Episodes | Fires | TR | TR (raw) | Recovery | Det. recall "
+        "| Model | Task | Episodes | Fires | TR | TR (raw) | TR (floor-adj) | Recovery | Det. recall "
         "| Det. precision (strict, 3-tile) | Det. precision (loose, 10-tile) | Det. latency (ticks) |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for a in aggregates:
         lines.append(
             f"| {a['model']} | {a['task']} | {a['episodes_ok']}/{a['episodes']} "
             f"| {a['fires']} | {_fmt(a['throughput_retained'])} "
             f"| {_fmt(a['throughput_retained_raw'])} "
+            f"| {_fmt(a['throughput_retained_floor_adj'])} "
             f"| {_fmt(a['recovery_rate'], 2)} | {_fmt(a['detection_recall'], 2)} "
             f"| {_fmt(a['detection_precision_strict'], 2)} "
             f"| {_fmt(a['detection_precision'], 2)} "
@@ -263,8 +302,8 @@ def write_markdown(path: Path, aggregates, rows, args):
         "",
         "## Per-episode results",
         "",
-        "| Model | Task | Seed | Status | Fires | TR | TR (raw) | Recovery | Det. recall |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| Model | Task | Seed | Status | Fires | TR | TR (raw) | TR (floor-adj) | Recovery | Det. recall |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in rows:
         lines.append(
@@ -272,6 +311,7 @@ def write_markdown(path: Path, aggregates, rows, args):
             f"| {r['status']} | {r.get('fires', '-')} "
             f"| {_fmt(r.get('throughput_retained'))} "
             f"| {_fmt(r.get('throughput_retained_raw'))} "
+            f"| {_fmt(r.get('throughput_retained_floor_adj'))} "
             f"| {_fmt(r.get('recovery_rate'), 2)} "
             f"| {_fmt(r.get('detection_recall'), 2)} |"
         )

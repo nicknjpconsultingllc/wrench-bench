@@ -75,6 +75,16 @@ def _reset_between_tests(request):
     (and a reset); unit tests run without a server entirely."""
     if request.node.get_closest_marker("wrench_live"):
         inst = request.getfixturevalue("instance")
+        # Defensive: clear a stale game.tick_paused=true left over from some
+        # earlier process's instance.pause() whose matching unpause() never
+        # ran (a killed probe against this long-lived, heavily-shared
+        # container). With the game clock frozen, move_to() hangs
+        # indistinguishably from a slow-chunk-gen stall and never resolves
+        # -- see tests/wrench/test_floor_acceptance.py's module docstring
+        # for the original port-27001 diagnosis; observed live on port
+        # 27000 too (this port), so clear it unconditionally on every
+        # reset rather than assuming it's a 27001-only issue.
+        inst.rcon_client.send_command("/silent-command game.tick_paused = false")
         inst.initial_inventory = dict(inst.default_initial_inventory)
         inst.reset(reset_position=True)
     yield

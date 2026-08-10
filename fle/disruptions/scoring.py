@@ -186,6 +186,127 @@ def throughput_retained(
     return winsorize_tr(actual / expected)
 
 
+def _redundancy_total(fire_event) -> Optional[int]:
+    """Same-type redundancy count for an ``entity_destruction`` fire.
+
+    Read from the fired event's ``affected`` manifest, NOT ``detail``:
+    server.lua's ``KINDS.entity_destruction`` stashes ``same_type_total`` as
+    an extra field on the (sole) manifest entry it returns, following the
+    same "extra detail rides along on the manifest entry" pattern
+    ``resource_exhaustion`` (``tiles_changed``/``resource``) and
+    ``adaptive_strike`` (``consumers_disconnected``) already use. Because
+    ``affected`` is one of ``disruption_task.py``'s ``_LEDGER_TOP_LEVEL_KEYS``,
+    it is never routed through the detail-draining step, so this field lands
+    on ``fire_event.affected[0]``, not ``fire_event.detail``.
+
+    Returns None when the fire isn't ``entity_destruction``, there is no
+    affected entry, or the field is absent (older ledger data predating this
+    field, or a kind whose manifest never sets it).
+    """
+    if _get(fire_event, "kind") != "entity_destruction":
+        return None
+    affected = _get(fire_event, "affected", []) or []
+    if not affected:
+        return None
+    total = _get(affected[0], "same_type_total")
+    if total is None:
+        return None
+    return int(total)
+
+
+def floor_adjusted_throughput_retained_parts(
+    samples: Sequence[dict],
+    item: str,
+    fire_tick: int,
+    horizon_ticks: int,
+    fire_event,
+) -> Optional[Tuple[float, float]]:
+    """Raw (actual, expected) integrals for a redundancy-floor-adjusted TR.
+
+    Isolates the agent's own recovery contribution from passive redundancy
+    that would have retained some throughput even under a fully inert
+    (no-op) agent. Only defined for ``entity_destruction`` fires, where
+    server.lua's victim-selection step already counts, BEFORE the kill,
+    how many same-name entities existed (``same_type_total`` on the fired
+    event's manifest entry -- see ``_redundancy_total``). That count is
+    fixed the instant the disruption fires and cannot be influenced by
+    anything the agent does afterward -- the same non-manipulability
+    property ``frozen_baseline`` already has with respect to fire time.
+    This is deliberately NOT derived from observed post-fire samples: an
+    earlier design that inferred the floor from where post-fire production
+    plateaus was rejected because it let an agent manufacture an
+    artificially low floor by self-sabotaging (e.g. deconstructing the
+    survivor) right after the fire, then "recovering" from its own damage
+    for free credit. Anchoring to the fixed pre-fire count closes that off
+    by construction: the floor cannot move no matter what the post-fire
+    samples look like.
+
+    floor = expected * (redundancy_total - 1) / redundancy_total
+
+    where ``expected`` is ``throughput_retained_parts``'s raw denominator
+    (frozen baseline rate x horizon) and ``redundancy_total - 1`` is the
+    number of same-type entities that survived the kill (exactly one is
+    always destroyed by this kind). Returns ``(actual - floor, expected -
+    floor)`` -- same numerator/denominator pooling contract as
+    ``throughput_retained_parts`` (sum numerators / sum denominators across
+    fires/episodes, never mean-of-ratios).
+
+    Sanity check: with a single point of failure (``redundancy_total ==
+    1``), ``floor == 0`` and this collapses exactly to
+    ``throughput_retained_parts``'s own output -- the floor adjustment is a
+    strict no-op when there was never any redundancy to begin with.
+
+    Returns None when:
+    - the fire's ``kind`` is not ``entity_destruction`` (deliberate v1 scope
+      limit: ``belt_cut`` has no cheap belt-network redundancy graph,
+      ``resource_exhaustion``/``adaptive_strike`` need spatial/topology
+      reasoning that doesn't generalize cheaply -- see this module's other
+      denominator-policy None cases for the same "don't guess, say so"
+      convention),
+    - ``same_type_total`` is missing from the fired event, or is < 1, or
+    - the underlying ``throughput_retained_parts`` is itself None (the
+      module's usual denominator policy: degenerate/unavailable frozen
+      baseline).
+    """
+    redundancy_total = _redundancy_total(fire_event)
+    if redundancy_total is None or redundancy_total < 1:
+        return None
+    parts = throughput_retained_parts(samples, item, fire_tick, horizon_ticks)
+    if parts is None:
+        return None
+    actual, expected = parts
+    floor = expected * (redundancy_total - 1) / redundancy_total
+    return (actual - floor, expected - floor)
+
+
+def floor_adjusted_throughput_retained(
+    samples: Sequence[dict],
+    item: str,
+    fire_tick: int,
+    horizon_ticks: int,
+    fire_event,
+) -> Optional[float]:
+    """Single-episode floor-adjusted TR scalar (winsorized to [-0.5, 1.5]).
+
+    Convenience wrapper around ``floor_adjusted_throughput_retained_parts``
+    for one-off display or tests. Cross-episode/cross-fire aggregation MUST
+    use ``floor_adjusted_throughput_retained_parts``' raw
+    ``(actual - floor, expected - floor)`` pair and pool by summing
+    numerators/denominators separately -- see that function's docstring --
+    NOT by averaging this scalar across fires. Returns None under the same
+    policy as ``floor_adjusted_throughput_retained_parts`` (non-
+    ``entity_destruction`` kind, missing/invalid redundancy count, or a
+    degenerate baseline).
+    """
+    parts = floor_adjusted_throughput_retained_parts(
+        samples, item, fire_tick, horizon_ticks, fire_event
+    )
+    if parts is None:
+        return None
+    actual, expected = parts
+    return winsorize_tr(actual / expected)
+
+
 def _first_sustained_recovery_tick(
     samples: Sequence[dict],
     item: str,

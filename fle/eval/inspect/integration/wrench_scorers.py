@@ -27,6 +27,7 @@ from pydantic import Field
 from fle.disruptions.scoring import (
     detection_counts,
     detection_metrics,
+    floor_adjusted_throughput_retained_parts,
     frozen_baseline,
     recovery_at,
     throughput_retained_parts,
@@ -92,6 +93,17 @@ def throughput_retained_scorer() -> Scorer:
     episode end. NaN when no fire was scoreable (e.g. nothing armed).
     Metadata carries the raw pooled numerator/denominator plus per-fire
     breakdowns for cross-seed pooling.
+
+    Also carries the redundancy-floor-adjusted numerator/denominator
+    (``floor_adjusted_pooled_numerator``/``_denominator``,
+    ``floor_adjusted_num_fires``) alongside the plain TR numbers above --
+    additive, never replacing them. See
+    ``fle.disruptions.scoring.floor_adjusted_throughput_retained_parts`` for
+    the metric definition; it is only defined for ``entity_destruction``
+    fires carrying a ``same_type_total`` redundancy count, so fires of other
+    kinds (or missing the field) simply don't contribute to this pool,
+    exactly like a degenerate baseline doesn't contribute to the plain TR
+    pool above.
     """
 
     async def score(state: AgentState, target: Target) -> Score:
@@ -101,6 +113,9 @@ def throughput_retained_scorer() -> Scorer:
         per_fire = []
         num = 0.0
         den = 0.0
+        floor_num = 0.0
+        floor_den = 0.0
+        floor_adjusted_num_fires = 0
         for fire in fires:
             fire_tick = int(fire.get("tick", 0))
             horizon = max(0, data.end_tick - fire_tick)
@@ -119,10 +134,30 @@ def throughput_retained_scorer() -> Scorer:
                 entry["actual"] = None
                 entry["expected"] = None
                 entry["tr"] = None
+
+            floor_parts = floor_adjusted_throughput_retained_parts(
+                data.samples, item, fire_tick, horizon, fire
+            )
+            if floor_parts is not None:
+                floor_actual, floor_expected = floor_parts
+                entry["floor_actual"] = floor_actual
+                entry["floor_expected"] = floor_expected
+                entry["floor_tr"] = winsorize_tr(floor_actual / floor_expected)
+                floor_num += floor_actual
+                floor_den += floor_expected
+                floor_adjusted_num_fires += 1
+            else:
+                entry["floor_actual"] = None
+                entry["floor_expected"] = None
+                entry["floor_tr"] = None
             per_fire.append(entry)
 
         scoreable = den > 0
         pooled: Optional[float] = winsorize_tr(num / den) if scoreable else None
+        floor_scoreable = floor_den > 0
+        floor_pooled: Optional[float] = (
+            winsorize_tr(floor_num / floor_den) if floor_scoreable else None
+        )
         return Score(
             value=pooled if pooled is not None else float("nan"),
             answer=f"{pooled:.3f}" if pooled is not None else "unscoreable",
@@ -137,6 +172,11 @@ def throughput_retained_scorer() -> Scorer:
                 "num_fires": len(fires),
                 "pooled_numerator": num,
                 "pooled_denominator": den,
+                "floor_adjusted_scoreable": floor_scoreable,
+                "floor_adjusted_num_fires": floor_adjusted_num_fires,
+                "floor_adjusted_pooled": floor_pooled,
+                "floor_adjusted_pooled_numerator": floor_num,
+                "floor_adjusted_pooled_denominator": floor_den,
                 "fires": per_fire,
             },
         )
