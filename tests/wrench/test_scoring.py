@@ -149,7 +149,19 @@ def _fire_event(kind="entity_destruction", same_type_total=2, tick=FIRE_TICK, na
     (never routed through ``detail``) -- see
     fle.disruptions.scoring._redundancy_total's docstring. Pass
     ``same_type_total=None`` to build a fire event missing the field
-    entirely (simulating older ledger data / a kind that never sets it)."""
+    entirely (simulating older ledger data / a kind that never sets it).
+
+    Note on what ``same_type_total`` means: server.lua no longer computes
+    this as a raw "how many entities share this name anywhere on the map"
+    count -- it groups candidates by shared ``electric_network_id`` when the
+    victim has one, or by a bounded radius (REDUNDANCY_RADIUS) otherwise,
+    specifically to stop an unrelated, distant same-named entity from
+    inflating the count (see server.lua's KINDS.entity_destruction comment
+    and tests/wrench/test_redundancy_grouping.py's live regression tests for
+    that fix). The functions under test here are unaffected by that change:
+    they only ever consume the already-computed integer, so a hand-set
+    ``same_type_total=2`` below is indistinguishable from -- and exercises
+    the exact same code path as -- a live-computed count of 2 post-fix."""
     entry = {"name": name, "x": 0.0, "y": 0.0}
     if same_type_total is not None:
         entry["same_type_total"] = same_type_total

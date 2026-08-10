@@ -8,6 +8,22 @@
 local WRENCH_INTERVAL = 41
 local SAMPLE_CAP = 2000
 
+-- Bounded-radius fallback for KINDS.entity_destruction's same_type_total
+-- grouping, used only when the victim has no electric_network_id (burner-
+-- tier entities -- stone furnaces, burner mining drills -- draw no
+-- electricity, so the stronger electric-network signal isn't available for
+-- them). 100 tiles matches the map-scale finding documented in
+-- fle/eval/tasks/task_definitions/disruption/sentinel_tasks.py (the
+-- iron_plate_scarcity_sentinel comment): live calibration found exactly one
+-- practically-reachable resource patch of each type within ~100 tiles of
+-- spawn, with the next-nearest same-type patch ~350+ tiles away -- i.e. a
+-- single build's practical footprint tops out well under 100 tiles, while
+-- an unrelated/abandoned build sits far outside it. This is a generous
+-- radius chosen to comfortably contain one real build without excluding a
+-- genuinely redundant pair, not a tight one -- see the comment at its use
+-- site for why this is an approximation, not true functional redundancy.
+local REDUNDANCY_RADIUS = 100
+
 local function wrench_state()
     if not storage.wrench then
         storage.wrench = { armed = {}, events = {}, samples = {}, tracked = {}, resolved = {}, next_id = 1 }
@@ -54,12 +70,50 @@ KINDS.entity_destruction = function(spec)
     if not idx then return nil, "no matching entity", true end
     local e = es[idx]
     -- Redundancy count fixed at fire time, before e.die(): how many entities
-    -- in the candidate list share this one's name. Non-manipulable by the
-    -- agent (computed before it can react) -- feeds the floor-adjusted TR in
+    -- in the candidate list share this one's name AND are plausibly part of
+    -- the same production setup as the victim -- not just anywhere on the
+    -- map with a matching name (raw name+type matching over-counts distant,
+    -- unrelated same-named entities, e.g. an abandoned early build or an
+    -- over-provisioned spare elsewhere on the map). Two grouping signals,
+    -- preferring the stronger one when it's available:
+    --   1. Electric-network match (the same signal KINDS.adaptive_strike
+    --      already uses to reason about shared power infrastructure): if
+    --      the victim has a non-nil electric_network_id, only same-named
+    --      candidates sharing that exact network id count. Being wired into
+    --      the same power network is a much stronger same-production-line
+    --      signal than name+type alone, and it's a graph Factorio exposes
+    --      for free.
+    --   2. Bounded-radius fallback (REDUNDANCY_RADIUS, see its own comment)
+    --      for entities with no electric_network_id at all -- burner-tier
+    --      entities (stone furnaces, burner mining drills) draw no
+    --      electricity, so signal 1 never applies to them. Only same-named
+    --      candidates within REDUNDANCY_RADIUS tiles of the victim count.
+    -- Neither signal is true functional/topological redundancy (tracing the
+    -- actual belt/inserter chain to confirm an entity feeds the SAME output
+    -- as the victim is an open problem -- see adaptive_strike's own comment
+    -- on why a full graph-cut isn't done there either); this is a bounded,
+    -- honestly-approximate mitigation that meaningfully reduces the
+    -- overcounting risk, not a perfect fix. Non-manipulable by the agent
+    -- (computed before it can react) -- feeds the floor-adjusted TR in
     -- fle/disruptions/scoring.py (floor_adjusted_throughput_retained_parts).
     local same_type_total = 0
-    for _, other in pairs(es) do
-        if other.name == e.name then same_type_total = same_type_total + 1 end
+    if e.electric_network_id then
+        for _, other in pairs(es) do
+            if other.name == e.name and other.electric_network_id == e.electric_network_id then
+                same_type_total = same_type_total + 1
+            end
+        end
+    else
+        local r2 = REDUNDANCY_RADIUS * REDUNDANCY_RADIUS
+        for _, other in pairs(es) do
+            if other.name == e.name then
+                local dx = other.position.x - e.position.x
+                local dy = other.position.y - e.position.y
+                if dx * dx + dy * dy <= r2 then
+                    same_type_total = same_type_total + 1
+                end
+            end
+        end
     end
     local m = manifest_entry(e)
     m.same_type_total = same_type_total
