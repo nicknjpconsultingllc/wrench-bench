@@ -187,7 +187,8 @@ def throughput_retained(
 
 
 def _redundancy_total(fire_event) -> Optional[int]:
-    """Same-type redundancy count for an ``entity_destruction`` fire.
+    """Bounded-approximate same-production-line redundancy count for an
+    ``entity_destruction`` fire.
 
     Read from the fired event's ``affected`` manifest, NOT ``detail``:
     server.lua's ``KINDS.entity_destruction`` stashes ``same_type_total`` as
@@ -198,6 +199,23 @@ def _redundancy_total(fire_event) -> Optional[int]:
     ``affected`` is one of ``disruption_task.py``'s ``_LEDGER_TOP_LEVEL_KEYS``,
     it is never routed through the detail-draining step, so this field lands
     on ``fire_event.affected[0]``, not ``fire_event.detail``.
+
+    This is NOT a raw "how many entities share this name anywhere on the
+    map" count (an earlier version was, and it over-counted: a distant,
+    unrelated same-named entity -- an abandoned early build, an
+    over-provisioned spare -- inflated the count with no bearing on the
+    victim's actual production line). server.lua now groups candidates by
+    the stronger of two signals before counting: same
+    ``electric_network_id`` as the victim when it has one (the same signal
+    ``KINDS.adaptive_strike`` uses for shared power infrastructure), or same-
+    name entities within a bounded radius (``REDUNDANCY_RADIUS`` in
+    server.lua) when the victim is burner-tier and has no electric network.
+    Neither is true functional/topological redundancy (that would require
+    tracing the actual belt/inserter chain -- an open problem, see
+    server.lua's comment on why ``adaptive_strike``'s graph-cut doesn't
+    generalize here either); it is a bounded, honestly-approximate
+    mitigation, not a perfect fix. See server.lua's ``KINDS.entity_destruction``
+    for the full grouping logic.
 
     Returns None when the fire isn't ``entity_destruction``, there is no
     affected entry, or the field is absent (older ledger data predating this
@@ -226,12 +244,15 @@ def floor_adjusted_throughput_retained_parts(
     Isolates the agent's own recovery contribution from passive redundancy
     that would have retained some throughput even under a fully inert
     (no-op) agent. Only defined for ``entity_destruction`` fires, where
-    server.lua's victim-selection step already counts, BEFORE the kill,
-    how many same-name entities existed (``same_type_total`` on the fired
-    event's manifest entry -- see ``_redundancy_total``). That count is
-    fixed the instant the disruption fires and cannot be influenced by
-    anything the agent does afterward -- the same non-manipulability
-    property ``frozen_baseline`` already has with respect to fire time.
+    server.lua's victim-selection step already counts, BEFORE the kill, how
+    many same-name entities plausibly shared the victim's production setup
+    (``same_type_total`` on the fired event's manifest entry -- see
+    ``_redundancy_total`` for the electric-network-or-bounded-radius
+    grouping this count now uses, and its honestly-approximate limits).
+    That count is fixed the instant the disruption fires and cannot be
+    influenced by anything the agent does afterward -- the same non-
+    manipulability property ``frozen_baseline`` already has with respect to
+    fire time.
     This is deliberately NOT derived from observed post-fire samples: an
     earlier design that inferred the floor from where post-fire production
     plateaus was rejected because it let an agent manufacture an
