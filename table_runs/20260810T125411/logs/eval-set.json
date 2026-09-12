@@ -1,0 +1,77 @@
+{
+  "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+  "tasks": [
+    {
+      "name": "iron_plate_observability_sentinel",
+      "task_id": "SGH2twyc5b3duLsJuTVgLj",
+      "task_args": {},
+      "model": "openrouter/anthropic/claude-sonnet-5",
+      "model_args": {},
+      "sequence": 0
+    },
+    {
+      "name": "iron_plate_adaptive_sentinel",
+      "task_id": "ToabRobVdEG8hXDSCLciSa",
+      "task_args": {},
+      "model": "openrouter/anthropic/claude-sonnet-5",
+      "model_args": {},
+      "sequence": 1
+    },
+    {
+      "name": "iron_plate_scarcity_sentinel",
+      "task_id": "YfEzXwYE3GCvebPEmkx5sv",
+      "task_args": {},
+      "model": "openrouter/anthropic/claude-sonnet-5",
+      "model_args": {},
+      "sequence": 2
+    },
+    {
+      "name": "iron_plate_observability_sentinel",
+      "task_id": "AGsEAkyj2C4XKdkQUwmDzt",
+      "task_args": {},
+      "model": "openrouter/openai/gpt-5.1",
+      "model_args": {},
+      "sequence": 0
+    },
+    {
+      "name": "iron_plate_adaptive_sentinel",
+      "task_id": "SYHbQ7gnEdU6cstgNaKCPa",
+      "task_args": {},
+      "model": "openrouter/openai/gpt-5.1",
+      "model_args": {},
+      "sequence": 1
+    },
+    {
+      "name": "iron_plate_scarcity_sentinel",
+      "task_id": "2ojhE8AkoubvVVWxVy2nb6",
+      "task_args": {},
+      "model": "openrouter/openai/gpt-5.1",
+      "model_args": {},
+      "sequence": 2
+    },
+    {
+      "name": "iron_plate_observability_sentinel",
+      "task_id": "DBMymUkG6xJfCFSiBuCTDh",
+      "task_args": {},
+      "model": "openrouter/google/gemini-2.5-pro",
+      "model_args": {},
+      "sequence": 0
+    },
+    {
+      "name": "iron_plate_adaptive_sentinel",
+      "task_id": "N2MEzEFjz7k7BewLcwExXi",
+      "task_args": {},
+      "model": "openrouter/google/gemini-2.5-pro",
+      "model_args": {},
+      "sequence": 1
+    },
+    {
+      "name": "iron_plate_scarcity_sentinel",
+      "task_id": "FmareJt9q88qhPyZMAqheC",
+      "task_args": {},
+      "model": "openrouter/google/gemini-2.5-pro",
+      "model_args": {},
+      "sequence": 2
+    }
+  ]
+}

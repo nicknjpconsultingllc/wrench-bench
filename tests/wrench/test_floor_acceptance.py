@@ -239,7 +239,7 @@ def build_belt_fed_furnace(game, instance):
     add_power_source(instance, (pole1.position.x, pole1.position.y - 1))
     furnace = game.place_entity(Prototype.ElectricFurnace, position=Position(x=0, y=0))
 
-    inserter_out = game.place_entity(
+    game.place_entity(
         Prototype.Inserter, position=Position(x=-2, y=0), direction=Direction.RIGHT
     )
     game.place_entity(Prototype.SmallElectricPole, position=Position(x=-4, y=-2))

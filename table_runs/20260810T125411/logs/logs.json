@@ -1,0 +1,3061 @@
+{
+  "2026-08-10T16-54-12-00-00_iron-plate-observability-sentinel_DBMymUkG6xJfCFSiBuCTDh.eval": {
+    "version": 2,
+    "status": "success",
+    "eval": {
+      "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+      "eval_id": "KMq8kCygaLeroue6fmjr9R",
+      "run_id": "5KSoP3hnTbzwWXJXRXWSRA",
+      "created": "2026-08-10T16:54:12+00:00",
+      "task": "iron_plate_observability_sentinel",
+      "task_id": "DBMymUkG6xJfCFSiBuCTDh",
+      "task_version": 0,
+      "task_display_name": "iron_plate_observability_sentinel",
+      "task_attribs": {},
+      "task_args": {},
+      "task_args_passed": {},
+      "solver_args_passed": {},
+      "dataset": {
+        "samples": 2,
+        "sample_ids": [
+          "iron_plate_observability_sentinel_seed0",
+          "iron_plate_observability_sentinel_seed1"
+        ],
+        "shuffled": false
+      },
+      "model": "openrouter/google/gemini-2.5-pro",
+      "model_generate_config": {
+        "max_connections": 3
+      },
+      "model_args": {},
+      "config": {
+        "epochs": 1,
+        "fail_on_error": false,
+        "continue_on_fail": false,
+        "score_on_error": false,
+        "max_samples": 3,
+        "max_tasks": 10,
+        "sandbox_cleanup": true,
+        "log_samples": true,
+        "log_realtime": true,
+        "log_images": true,
+        "score_display": true
+      },
+      "revision": {
+        "type": "git",
+        "origin": "git@github.com:nicknjpconsultingllc/wrench-bench.git",
+        "commit": "224cc9e7",
+        "dirty": true
+      },
+      "packages": {
+        "inspect_ai": "0.3.253"
+      },
+      "scorers": [
+        {
+          "name": "throughput_retained_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "recovery_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "detection_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    "plan": {
+      "name": "plan",
+      "steps": [
+        {
+          "solver": "wrench_solver",
+          "params": {},
+          "params_passed": {}
+        }
+      ],
+      "config": {
+        "max_connections": 3
+      }
+    },
+    "results": {
+      "total_samples": 2,
+      "completed_samples": 2,
+      "scores": [
+        {
+          "name": "throughput_retained_scorer",
+          "scorer": "throughput_retained_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.9737314028088507,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "recovery_scorer",
+          "scorer": "recovery_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "detection_scorer",
+          "scorer": "detection_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.0,
+              "params": {}
+            }
+          }
+        }
+      ]
+    },
+    "stats": {
+      "started_at": "2026-08-10T16:54:12+00:00",
+      "completed_at": "2026-08-10T21:15:09+00:00",
+      "model_usage": {
+        "openrouter/google/gemini-2.5-pro": {
+          "input_tokens": 3057111,
+          "output_tokens": 161007,
+          "total_tokens": 4107342,
+          "input_tokens_cache_read": 889224,
+          "reasoning_tokens": 109025
+        }
+      },
+      "role_usage": {},
+      "connection_limit_history": []
+    },
+    "invalidated": false,
+    "tags": [],
+    "metadata": {},
+    "reductions": [
+      {
+        "scorer": "throughput_retained_scorer",
+        "samples": [
+          {
+            "value": 0.5039594091731285,
+            "answer": "0.504",
+            "explanation": "TR pooled over 2 fire(s): 0.504",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "pooled_numerator": 857.0,
+              "pooled_denominator": 1700.5337818895432,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 0.4445842877568426,
+              "floor_adjusted_pooled_numerator": 439.0,
+              "floor_adjusted_pooled_denominator": 987.439304737875,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 86904461,
+                  "seed": 11,
+                  "horizon_ticks": 207188,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 439.0,
+                  "expected": 987.439304737875,
+                  "tr": 0.4445842877568426,
+                  "floor_actual": 439.0,
+                  "floor_expected": 987.439304737875,
+                  "floor_tr": 0.4445842877568426
+                },
+                {
+                  "kind": "belt_cut",
+                  "tick": 86962025,
+                  "seed": 23,
+                  "horizon_ticks": 149624,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 418.0,
+                  "expected": 713.0944771516681,
+                  "tr": 0.5861775871124796,
+                  "floor_actual": null,
+                  "floor_expected": null,
+                  "floor_tr": null
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed0"
+          },
+          {
+            "value": 1.443503396444573,
+            "answer": "1.444",
+            "explanation": "TR pooled over 1 fire(s): 1.444",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "pooled_numerator": 1526.0,
+              "pooled_denominator": 1057.1502663302495,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 1.443503396444573,
+              "floor_adjusted_pooled_numerator": 1526.0,
+              "floor_adjusted_pooled_denominator": 1057.1502663302495,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 43964054,
+                  "seed": 12,
+                  "horizon_ticks": 221815,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 1526.0,
+                  "expected": 1057.1502663302495,
+                  "tr": 1.443503396444573,
+                  "floor_actual": 1526.0,
+                  "floor_expected": 1057.1502663302495,
+                  "floor_tr": 1.443503396444573
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "recovery_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "2/2",
+            "explanation": "Recovered 2 of 2 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "recovered": 2,
+              "scoreable_fires": 2,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 86904461,
+                  "seed": 11,
+                  "budget_ticks": 207188,
+                  "recovered": true
+                },
+                {
+                  "kind": "belt_cut",
+                  "tick": 86962025,
+                  "seed": 23,
+                  "budget_ticks": 149624,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "1/1",
+            "explanation": "Recovered 1 of 1 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "recovered": 1,
+              "scoreable_fires": 1,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 43964054,
+                  "seed": 12,
+                  "budget_ticks": 221815,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "detection_scorer",
+        "samples": [
+          {
+            "value": 0.0,
+            "answer": "recall=0.00",
+            "explanation": "Detection over 2 fire(s), 3 report(s): recall=0.00, precision_strict=0.33 (loose 0.33)",
+            "metadata": {
+              "precision": 0.3333333333333333,
+              "precision_strict": 0.3333333333333333,
+              "recall": 0.0,
+              "latencies": [
+                62960
+              ],
+              "mean_latency_ticks": 62960.0,
+              "matched_reports": 1,
+              "matched_reports_strict": 1,
+              "num_reports": 3,
+              "matched_fires": 1,
+              "num_fires": 2
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed0"
+          },
+          {
+            "value": 0.0,
+            "answer": "recall=0.00",
+            "explanation": "Detection over 1 fire(s), 16 report(s): recall=0.00, precision_strict=0.06 (loose 0.06)",
+            "metadata": {
+              "precision": 0.0625,
+              "precision_strict": 0.0625,
+              "recall": 0.0,
+              "latencies": [
+                19230
+              ],
+              "mean_latency_ticks": 19230.0,
+              "matched_reports": 1,
+              "matched_reports_strict": 1,
+              "num_reports": 16,
+              "matched_fires": 1,
+              "num_fires": 1
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed1"
+          }
+        ]
+      }
+    ]
+  },
+  "2026-08-10T16-54-12-00-00_iron-plate-scarcity-sentinel_YfEzXwYE3GCvebPEmkx5sv.eval": {
+    "version": 2,
+    "status": "success",
+    "eval": {
+      "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+      "eval_id": "W549evPyewQjqN38BEC2is",
+      "run_id": "5KSoP3hnTbzwWXJXRXWSRA",
+      "created": "2026-08-10T16:54:12+00:00",
+      "task": "iron_plate_scarcity_sentinel",
+      "task_id": "YfEzXwYE3GCvebPEmkx5sv",
+      "task_version": 0,
+      "task_display_name": "iron_plate_scarcity_sentinel",
+      "task_attribs": {},
+      "task_args": {},
+      "task_args_passed": {},
+      "solver_args_passed": {},
+      "dataset": {
+        "samples": 2,
+        "sample_ids": [
+          "iron_plate_scarcity_sentinel_seed0",
+          "iron_plate_scarcity_sentinel_seed1"
+        ],
+        "shuffled": false
+      },
+      "model": "openrouter/anthropic/claude-sonnet-5",
+      "model_generate_config": {
+        "max_connections": 3
+      },
+      "model_args": {},
+      "config": {
+        "epochs": 1,
+        "fail_on_error": false,
+        "continue_on_fail": false,
+        "score_on_error": false,
+        "max_samples": 3,
+        "max_tasks": 10,
+        "sandbox_cleanup": true,
+        "log_samples": true,
+        "log_realtime": true,
+        "log_images": true,
+        "score_display": true
+      },
+      "revision": {
+        "type": "git",
+        "origin": "git@github.com:nicknjpconsultingllc/wrench-bench.git",
+        "commit": "224cc9e7",
+        "dirty": true
+      },
+      "packages": {
+        "inspect_ai": "0.3.253"
+      },
+      "scorers": [
+        {
+          "name": "throughput_retained_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "recovery_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "detection_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    "plan": {
+      "name": "plan",
+      "steps": [
+        {
+          "solver": "wrench_solver",
+          "params": {},
+          "params_passed": {}
+        }
+      ],
+      "config": {
+        "max_connections": 3
+      }
+    },
+    "results": {
+      "total_samples": 2,
+      "completed_samples": 2,
+      "scores": [
+        {
+          "name": "throughput_retained_scorer",
+          "scorer": "throughput_retained_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.468769857020438,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "recovery_scorer",
+          "scorer": "recovery_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "detection_scorer",
+          "scorer": "detection_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.5,
+              "params": {}
+            }
+          }
+        }
+      ]
+    },
+    "stats": {
+      "started_at": "2026-08-10T16:54:12+00:00",
+      "completed_at": "2026-08-10T20:51:07+00:00",
+      "model_usage": {
+        "openrouter/anthropic/claude-sonnet-5": {
+          "input_tokens": 3093804,
+          "output_tokens": 111734,
+          "total_tokens": 7754498,
+          "input_tokens_cache_write": 47385,
+          "input_tokens_cache_read": 4501575,
+          "reasoning_tokens": 13634
+        }
+      },
+      "role_usage": {},
+      "connection_limit_history": []
+    },
+    "invalidated": false,
+    "tags": [],
+    "metadata": {},
+    "reductions": [
+      {
+        "scorer": "throughput_retained_scorer",
+        "samples": [
+          {
+            "value": 1.4375397140408759,
+            "answer": "1.438",
+            "explanation": "TR pooled over 2 fire(s): 1.438",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "pooled_numerator": 4694.0,
+              "pooled_denominator": 3265.301093355761,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 1.5,
+              "floor_adjusted_pooled_numerator": 1562.2465657415196,
+              "floor_adjusted_pooled_denominator": 927.7534342584805,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 43554341,
+                  "seed": 29,
+                  "horizon_ticks": 389329,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 2490.0,
+                  "expected": 1855.506868516961,
+                  "tr": 1.3419513784878447,
+                  "floor_actual": 1562.2465657415196,
+                  "floor_expected": 927.7534342584805,
+                  "floor_tr": 1.5
+                },
+                {
+                  "kind": "resource_exhaustion",
+                  "tick": 43647862,
+                  "seed": 31,
+                  "horizon_ticks": 295808,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 2204.0,
+                  "expected": 1409.7942248388001,
+                  "tr": 1.5,
+                  "floor_actual": null,
+                  "floor_expected": null,
+                  "floor_tr": null
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed0"
+          },
+          {
+            "value": 1.5,
+            "answer": "1.500",
+            "explanation": "TR pooled over 2 fire(s): 1.500",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "pooled_numerator": 5311.0,
+              "pooled_denominator": 3507.155032239978,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 1.5,
+              "floor_adjusted_pooled_numerator": 1771.2842724978973,
+              "floor_adjusted_pooled_denominator": 937.7157275021027,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 49405943,
+                  "seed": 30,
+                  "horizon_ticks": 371648,
+                  "baseline_per_min": 18.166526492851137,
+                  "actual": 2709.0,
+                  "expected": 1875.4314550042054,
+                  "tr": 1.4444676145169622,
+                  "floor_actual": 1771.2842724978973,
+                  "floor_expected": 937.7157275021027,
+                  "floor_tr": 1.5
+                },
+                {
+                  "kind": "resource_exhaustion",
+                  "tick": 49435217,
+                  "seed": 32,
+                  "horizon_ticks": 342374,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 2602.0,
+                  "expected": 1631.7235772357726,
+                  "tr": 1.5,
+                  "floor_actual": null,
+                  "floor_expected": null,
+                  "floor_tr": null
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "recovery_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "2/2",
+            "explanation": "Recovered 2 of 2 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "recovered": 2,
+              "scoreable_fires": 2,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 43554341,
+                  "seed": 29,
+                  "budget_ticks": 389329,
+                  "recovered": true
+                },
+                {
+                  "kind": "resource_exhaustion",
+                  "tick": 43647862,
+                  "seed": 31,
+                  "budget_ticks": 295808,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "2/2",
+            "explanation": "Recovered 2 of 2 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "recovered": 2,
+              "scoreable_fires": 2,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 49405943,
+                  "seed": 30,
+                  "budget_ticks": 371648,
+                  "recovered": true
+                },
+                {
+                  "kind": "resource_exhaustion",
+                  "tick": 49435217,
+                  "seed": 32,
+                  "budget_ticks": 342374,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "detection_scorer",
+        "samples": [
+          {
+            "value": 0.0,
+            "answer": "recall=0.00",
+            "explanation": "Detection over 2 fire(s), 0 report(s): recall=0.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 0.0,
+              "latencies": [],
+              "mean_latency_ticks": null,
+              "matched_reports": 0,
+              "matched_reports_strict": 0,
+              "num_reports": 0,
+              "matched_fires": 0,
+              "num_fires": 2
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "recall=1.00",
+            "explanation": "Detection over 2 fire(s), 3 report(s): recall=1.00, precision_strict=0.67 (loose 0.67)",
+            "metadata": {
+              "precision": 0.6666666666666666,
+              "precision_strict": 0.6666666666666666,
+              "recall": 1.0,
+              "latencies": [
+                41218,
+                236339
+              ],
+              "mean_latency_ticks": 138778.5,
+              "matched_reports": 2,
+              "matched_reports_strict": 2,
+              "num_reports": 3,
+              "matched_fires": 2,
+              "num_fires": 2
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed1"
+          }
+        ]
+      }
+    ]
+  },
+  "2026-08-10T16-54-12-00-00_iron-plate-scarcity-sentinel_FmareJt9q88qhPyZMAqheC.eval": {
+    "version": 2,
+    "status": "success",
+    "eval": {
+      "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+      "eval_id": "DcexvSRek5NiQBqji4pjKV",
+      "run_id": "5KSoP3hnTbzwWXJXRXWSRA",
+      "created": "2026-08-10T16:54:12+00:00",
+      "task": "iron_plate_scarcity_sentinel",
+      "task_id": "FmareJt9q88qhPyZMAqheC",
+      "task_version": 0,
+      "task_display_name": "iron_plate_scarcity_sentinel",
+      "task_attribs": {},
+      "task_args": {},
+      "task_args_passed": {},
+      "solver_args_passed": {},
+      "dataset": {
+        "samples": 2,
+        "sample_ids": [
+          "iron_plate_scarcity_sentinel_seed0",
+          "iron_plate_scarcity_sentinel_seed1"
+        ],
+        "shuffled": false
+      },
+      "model": "openrouter/google/gemini-2.5-pro",
+      "model_generate_config": {
+        "max_connections": 3
+      },
+      "model_args": {},
+      "config": {
+        "epochs": 1,
+        "fail_on_error": false,
+        "continue_on_fail": false,
+        "score_on_error": false,
+        "max_samples": 3,
+        "max_tasks": 10,
+        "sandbox_cleanup": true,
+        "log_samples": true,
+        "log_realtime": true,
+        "log_images": true,
+        "score_display": true
+      },
+      "revision": {
+        "type": "git",
+        "origin": "git@github.com:nicknjpconsultingllc/wrench-bench.git",
+        "commit": "224cc9e7",
+        "dirty": true
+      },
+      "packages": {
+        "inspect_ai": "0.3.253"
+      },
+      "scorers": [
+        {
+          "name": "throughput_retained_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "recovery_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "detection_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    "plan": {
+      "name": "plan",
+      "steps": [
+        {
+          "solver": "wrench_solver",
+          "params": {},
+          "params_passed": {}
+        }
+      ],
+      "config": {
+        "max_connections": 3
+      }
+    },
+    "results": {
+      "total_samples": 2,
+      "completed_samples": 2,
+      "scores": [
+        {
+          "name": "throughput_retained_scorer",
+          "scorer": "throughput_retained_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.44577486758800855,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "recovery_scorer",
+          "scorer": "recovery_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "detection_scorer",
+          "scorer": "detection_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.25,
+              "params": {}
+            }
+          }
+        }
+      ]
+    },
+    "stats": {
+      "started_at": "2026-08-10T16:54:12+00:00",
+      "completed_at": "2026-08-10T20:24:24+00:00",
+      "model_usage": {
+        "openrouter/google/gemini-2.5-pro": {
+          "input_tokens": 5071493,
+          "output_tokens": 157970,
+          "total_tokens": 5895731,
+          "input_tokens_cache_read": 666268,
+          "reasoning_tokens": 82758
+        }
+      },
+      "role_usage": {},
+      "connection_limit_history": []
+    },
+    "invalidated": false,
+    "tags": [],
+    "metadata": {},
+    "reductions": [
+      {
+        "scorer": "throughput_retained_scorer",
+        "samples": [
+          {
+            "value": 0.8037785171978242,
+            "answer": "0.804",
+            "explanation": "TR pooled over 2 fire(s): 0.804",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "pooled_numerator": 2691.0,
+              "pooled_denominator": 3347.937202130642,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 0.3961131200004105,
+              "floor_adjusted_pooled_numerator": 230.7795533127744,
+              "floor_adjusted_pooled_denominator": 582.6102233436127,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 48991351,
+                  "seed": 29,
+                  "horizon_ticks": 366736,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 1396.0,
+                  "expected": 1747.8306700308383,
+                  "tr": 0.7987043733334702,
+                  "floor_actual": 230.7795533127744,
+                  "floor_expected": 582.6102233436127,
+                  "floor_tr": 0.3961131200004105
+                },
+                {
+                  "kind": "resource_exhaustion",
+                  "tick": 49022347,
+                  "seed": 31,
+                  "horizon_ticks": 335740,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 1295.0,
+                  "expected": 1600.1065320998039,
+                  "tr": 0.8093211133264886,
+                  "floor_actual": null,
+                  "floor_expected": null,
+                  "floor_tr": null
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed0"
+          },
+          {
+            "value": 0.08777121797819283,
+            "answer": "0.088",
+            "explanation": "TR pooled over 2 fire(s): 0.088",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "pooled_numerator": 185.0,
+              "pooled_denominator": 2107.752453041772,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": -0.5,
+              "floor_adjusted_pooled_numerator": -400.253013737034,
+              "floor_adjusted_pooled_denominator": 502.253013737034,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 86639806,
+                  "seed": 30,
+                  "horizon_ticks": 210769,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 102.0,
+                  "expected": 1004.506027474068,
+                  "tr": 0.10154244694428496,
+                  "floor_actual": -400.253013737034,
+                  "floor_expected": 502.253013737034,
+                  "floor_tr": -0.5
+                },
+                {
+                  "kind": "resource_exhaustion",
+                  "tick": 86643455,
+                  "seed": 32,
+                  "horizon_ticks": 207120,
+                  "baseline_per_min": 19.175777964676197,
+                  "actual": 83.0,
+                  "expected": 1103.246425567704,
+                  "tr": 0.07523251204488626,
+                  "floor_actual": null,
+                  "floor_expected": null,
+                  "floor_tr": null
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "recovery_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "2/2",
+            "explanation": "Recovered 2 of 2 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "recovered": 2,
+              "scoreable_fires": 2,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 48991351,
+                  "seed": 29,
+                  "budget_ticks": 366736,
+                  "recovered": true
+                },
+                {
+                  "kind": "resource_exhaustion",
+                  "tick": 49022347,
+                  "seed": 31,
+                  "budget_ticks": 335740,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "2/2",
+            "explanation": "Recovered 2 of 2 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 2,
+              "recovered": 2,
+              "scoreable_fires": 2,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 86639806,
+                  "seed": 30,
+                  "budget_ticks": 210769,
+                  "recovered": true
+                },
+                {
+                  "kind": "resource_exhaustion",
+                  "tick": 86643455,
+                  "seed": 32,
+                  "budget_ticks": 207120,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "detection_scorer",
+        "samples": [
+          {
+            "value": 0.0,
+            "answer": "recall=0.00",
+            "explanation": "Detection over 2 fire(s), 10 report(s): recall=0.00, precision_strict=0.20 (loose 0.20)",
+            "metadata": {
+              "precision": 0.2,
+              "precision_strict": 0.2,
+              "recall": 0.0,
+              "latencies": [
+                30258,
+                13364
+              ],
+              "mean_latency_ticks": 21811.0,
+              "matched_reports": 2,
+              "matched_reports_strict": 2,
+              "num_reports": 10,
+              "matched_fires": 2,
+              "num_fires": 2
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed0"
+          },
+          {
+            "value": 0.5,
+            "answer": "recall=0.50",
+            "explanation": "Detection over 2 fire(s), 2 report(s): recall=0.50, precision_strict=0.50 (loose 0.50)",
+            "metadata": {
+              "precision": 0.5,
+              "precision_strict": 0.5,
+              "recall": 0.5,
+              "latencies": [
+                33
+              ],
+              "mean_latency_ticks": 33.0,
+              "matched_reports": 1,
+              "matched_reports_strict": 1,
+              "num_reports": 2,
+              "matched_fires": 1,
+              "num_fires": 2
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed1"
+          }
+        ]
+      }
+    ]
+  },
+  "2026-08-10T16-54-11-00-00_iron-plate-adaptive-sentinel_ToabRobVdEG8hXDSCLciSa.eval": {
+    "version": 2,
+    "status": "success",
+    "eval": {
+      "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+      "eval_id": "fEMV5XGebvnPZYFZFeUpkv",
+      "run_id": "5KSoP3hnTbzwWXJXRXWSRA",
+      "created": "2026-08-10T16:54:11+00:00",
+      "task": "iron_plate_adaptive_sentinel",
+      "task_id": "ToabRobVdEG8hXDSCLciSa",
+      "task_version": 0,
+      "task_display_name": "iron_plate_adaptive_sentinel",
+      "task_attribs": {},
+      "task_args": {},
+      "task_args_passed": {},
+      "solver_args_passed": {},
+      "dataset": {
+        "samples": 2,
+        "sample_ids": [
+          "iron_plate_adaptive_sentinel_seed0",
+          "iron_plate_adaptive_sentinel_seed1"
+        ],
+        "shuffled": false
+      },
+      "model": "openrouter/anthropic/claude-sonnet-5",
+      "model_generate_config": {
+        "max_connections": 3
+      },
+      "model_args": {},
+      "config": {
+        "epochs": 1,
+        "fail_on_error": false,
+        "continue_on_fail": false,
+        "score_on_error": false,
+        "max_samples": 3,
+        "max_tasks": 10,
+        "sandbox_cleanup": true,
+        "log_samples": true,
+        "log_realtime": true,
+        "log_images": true,
+        "score_display": true
+      },
+      "revision": {
+        "type": "git",
+        "origin": "git@github.com:nicknjpconsultingllc/wrench-bench.git",
+        "commit": "224cc9e7",
+        "dirty": true
+      },
+      "packages": {
+        "inspect_ai": "0.3.253"
+      },
+      "scorers": [
+        {
+          "name": "throughput_retained_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "recovery_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "detection_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    "plan": {
+      "name": "plan",
+      "steps": [
+        {
+          "solver": "wrench_solver",
+          "params": {},
+          "params_passed": {}
+        }
+      ],
+      "config": {
+        "max_connections": 3
+      }
+    },
+    "results": {
+      "total_samples": 2,
+      "completed_samples": 2,
+      "scores": [
+        {
+          "name": "throughput_retained_scorer",
+          "scorer": "throughput_retained_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.5,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "recovery_scorer",
+          "scorer": "recovery_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "detection_scorer",
+          "scorer": "detection_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.5,
+              "params": {}
+            }
+          }
+        }
+      ]
+    },
+    "stats": {
+      "started_at": "2026-08-10T16:54:12+00:00",
+      "completed_at": "2026-08-10T19:42:35+00:00",
+      "model_usage": {
+        "openrouter/anthropic/claude-sonnet-5": {
+          "input_tokens": 2103583,
+          "output_tokens": 86045,
+          "total_tokens": 5215164,
+          "input_tokens_cache_write": 47274,
+          "input_tokens_cache_read": 2978262,
+          "reasoning_tokens": 3757
+        }
+      },
+      "role_usage": {},
+      "connection_limit_history": []
+    },
+    "invalidated": false,
+    "tags": [],
+    "metadata": {},
+    "reductions": [
+      {
+        "scorer": "throughput_retained_scorer",
+        "samples": [
+          {
+            "value": 1.5,
+            "answer": "1.500",
+            "explanation": "TR pooled over 1 fire(s): 1.500",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "pooled_numerator": 3447.0,
+              "pooled_denominator": 1651.26380712083,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 1.5,
+              "floor_adjusted_pooled_numerator": 3447.0,
+              "floor_adjusted_pooled_denominator": 1651.26380712083,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 48612798,
+                  "seed": 37,
+                  "horizon_ticks": 346474,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 3447.0,
+                  "expected": 1651.26380712083,
+                  "tr": 1.5,
+                  "floor_actual": 3447.0,
+                  "floor_expected": 1651.26380712083,
+                  "floor_tr": 1.5
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed0"
+          },
+          {
+            "value": 1.5,
+            "answer": "1.500",
+            "explanation": "TR pooled over 1 fire(s): 1.500",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "pooled_numerator": 2832.0,
+              "pooled_denominator": 1351.8598261844688,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 1.5,
+              "floor_adjusted_pooled_numerator": 2832.0,
+              "floor_adjusted_pooled_denominator": 1351.8598261844688,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 43237862,
+                  "seed": 38,
+                  "horizon_ticks": 283652,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 2832.0,
+                  "expected": 1351.8598261844688,
+                  "tr": 1.5,
+                  "floor_actual": 2832.0,
+                  "floor_expected": 1351.8598261844688,
+                  "floor_tr": 1.5
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "recovery_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "1/1",
+            "explanation": "Recovered 1 of 1 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "recovered": 1,
+              "scoreable_fires": 1,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 48612798,
+                  "seed": 37,
+                  "budget_ticks": 346474,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "1/1",
+            "explanation": "Recovered 1 of 1 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "recovered": 1,
+              "scoreable_fires": 1,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 43237862,
+                  "seed": 38,
+                  "budget_ticks": 283652,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "detection_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "recall=1.00",
+            "explanation": "Detection over 1 fire(s), 1 report(s): recall=1.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 1.0,
+              "latencies": [
+                11449
+              ],
+              "mean_latency_ticks": 11449.0,
+              "matched_reports": 1,
+              "matched_reports_strict": 1,
+              "num_reports": 1,
+              "matched_fires": 1,
+              "num_fires": 1
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed0"
+          },
+          {
+            "value": 0.0,
+            "answer": "recall=0.00",
+            "explanation": "Detection over 1 fire(s), 0 report(s): recall=0.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 0.0,
+              "latencies": [],
+              "mean_latency_ticks": null,
+              "matched_reports": 0,
+              "matched_reports_strict": 0,
+              "num_reports": 0,
+              "matched_fires": 0,
+              "num_fires": 1
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed1"
+          }
+        ]
+      }
+    ]
+  },
+  "2026-08-10T16-54-12-00-00_iron-plate-scarcity-sentinel_2ojhE8AkoubvVVWxVy2nb6.eval": {
+    "version": 2,
+    "status": "success",
+    "eval": {
+      "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+      "eval_id": "DjXtqcYNcQijB9Rw2AoDmn",
+      "run_id": "5KSoP3hnTbzwWXJXRXWSRA",
+      "created": "2026-08-10T16:54:12+00:00",
+      "task": "iron_plate_scarcity_sentinel",
+      "task_id": "2ojhE8AkoubvVVWxVy2nb6",
+      "task_version": 0,
+      "task_display_name": "iron_plate_scarcity_sentinel",
+      "task_attribs": {},
+      "task_args": {},
+      "task_args_passed": {},
+      "solver_args_passed": {},
+      "dataset": {
+        "samples": 2,
+        "sample_ids": [
+          "iron_plate_scarcity_sentinel_seed0",
+          "iron_plate_scarcity_sentinel_seed1"
+        ],
+        "shuffled": false
+      },
+      "model": "openrouter/openai/gpt-5.1",
+      "model_generate_config": {
+        "max_connections": 3
+      },
+      "model_args": {},
+      "config": {
+        "epochs": 1,
+        "fail_on_error": false,
+        "continue_on_fail": false,
+        "score_on_error": false,
+        "max_samples": 3,
+        "max_tasks": 10,
+        "sandbox_cleanup": true,
+        "log_samples": true,
+        "log_realtime": true,
+        "log_images": true,
+        "score_display": true
+      },
+      "revision": {
+        "type": "git",
+        "origin": "git@github.com:nicknjpconsultingllc/wrench-bench.git",
+        "commit": "224cc9e7",
+        "dirty": true
+      },
+      "packages": {
+        "inspect_ai": "0.3.253"
+      },
+      "scorers": [
+        {
+          "name": "throughput_retained_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "recovery_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "detection_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    "plan": {
+      "name": "plan",
+      "steps": [
+        {
+          "solver": "wrench_solver",
+          "params": {},
+          "params_passed": {}
+        }
+      ],
+      "config": {
+        "max_connections": 3
+      }
+    },
+    "results": {
+      "total_samples": 2,
+      "completed_samples": 2,
+      "scores": [
+        {
+          "name": "throughput_retained_scorer",
+          "scorer": "throughput_retained_scorer",
+          "scored_samples": 1,
+          "unscored_samples": 1,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.011280759103057893,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "recovery_scorer",
+          "scorer": "recovery_scorer",
+          "scored_samples": 1,
+          "unscored_samples": 1,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "detection_scorer",
+          "scorer": "detection_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.5,
+              "params": {}
+            }
+          }
+        }
+      ]
+    },
+    "stats": {
+      "started_at": "2026-08-10T16:54:12+00:00",
+      "completed_at": "2026-08-10T19:35:35+00:00",
+      "model_usage": {
+        "openrouter/openai/gpt-5.1": {
+          "input_tokens": 2047736,
+          "output_tokens": 46813,
+          "total_tokens": 5211605,
+          "input_tokens_cache_read": 3117056,
+          "reasoning_tokens": 0
+        }
+      },
+      "role_usage": {},
+      "connection_limit_history": []
+    },
+    "invalidated": false,
+    "tags": [],
+    "metadata": {},
+    "reductions": [
+      {
+        "scorer": "throughput_retained_scorer",
+        "samples": [
+          {
+            "value": 0.011280759103057893,
+            "answer": "0.011",
+            "explanation": "TR pooled over 1 fire(s): 0.011",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "pooled_numerator": 16.0,
+              "pooled_denominator": 1418.3442668909447,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": -0.5,
+              "floor_adjusted_pooled_numerator": -693.1721334454724,
+              "floor_adjusted_pooled_denominator": 709.1721334454724,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 42936143,
+                  "seed": 29,
+                  "horizon_ticks": 297602,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 16.0,
+                  "expected": 1418.3442668909447,
+                  "tr": 0.011280759103057893,
+                  "floor_actual": -693.1721334454724,
+                  "floor_expected": 709.1721334454724,
+                  "floor_tr": -0.5
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed0"
+          },
+          {
+            "value": NaN,
+            "answer": "unscoreable",
+            "explanation": "Not scoreable: 0 fire(s), no valid baseline",
+            "metadata": {
+              "scoreable": false,
+              "item": "iron-plate",
+              "num_fires": 0,
+              "pooled_numerator": 0.0,
+              "pooled_denominator": 0.0,
+              "floor_adjusted_scoreable": false,
+              "floor_adjusted_num_fires": 0,
+              "floor_adjusted_pooled": null,
+              "floor_adjusted_pooled_numerator": 0.0,
+              "floor_adjusted_pooled_denominator": 0.0,
+              "fires": []
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "recovery_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "1/1",
+            "explanation": "Recovered 1 of 1 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "recovered": 1,
+              "scoreable_fires": 1,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 42936143,
+                  "seed": 29,
+                  "budget_ticks": 297602,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed0"
+          },
+          {
+            "value": NaN,
+            "answer": "unscoreable",
+            "explanation": "Not scoreable: 0 fire(s), no valid baseline",
+            "metadata": {
+              "scoreable": false,
+              "item": "iron-plate",
+              "num_fires": 0,
+              "recovered": 0,
+              "scoreable_fires": 0,
+              "fires": []
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "detection_scorer",
+        "samples": [
+          {
+            "value": 0.0,
+            "answer": "recall=0.00",
+            "explanation": "Detection over 1 fire(s), 0 report(s): recall=0.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 0.0,
+              "latencies": [],
+              "mean_latency_ticks": null,
+              "matched_reports": 0,
+              "matched_reports_strict": 0,
+              "num_reports": 0,
+              "matched_fires": 0,
+              "num_fires": 1
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "recall=1.00",
+            "explanation": "Detection over 0 fire(s), 0 report(s): recall=1.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 1.0,
+              "latencies": [],
+              "mean_latency_ticks": null,
+              "matched_reports": 0,
+              "matched_reports_strict": 0,
+              "num_reports": 0,
+              "matched_fires": 0,
+              "num_fires": 0
+            },
+            "history": [],
+            "sample_id": "iron_plate_scarcity_sentinel_seed1"
+          }
+        ]
+      }
+    ]
+  },
+  "2026-08-10T16-54-12-00-00_iron-plate-adaptive-sentinel_N2MEzEFjz7k7BewLcwExXi.eval": {
+    "version": 2,
+    "status": "success",
+    "eval": {
+      "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+      "eval_id": "PP2ggECbfGfKBFrwC2tTSn",
+      "run_id": "5KSoP3hnTbzwWXJXRXWSRA",
+      "created": "2026-08-10T16:54:12+00:00",
+      "task": "iron_plate_adaptive_sentinel",
+      "task_id": "N2MEzEFjz7k7BewLcwExXi",
+      "task_version": 0,
+      "task_display_name": "iron_plate_adaptive_sentinel",
+      "task_attribs": {},
+      "task_args": {},
+      "task_args_passed": {},
+      "solver_args_passed": {},
+      "dataset": {
+        "samples": 2,
+        "sample_ids": [
+          "iron_plate_adaptive_sentinel_seed0",
+          "iron_plate_adaptive_sentinel_seed1"
+        ],
+        "shuffled": false
+      },
+      "model": "openrouter/google/gemini-2.5-pro",
+      "model_generate_config": {
+        "max_connections": 3
+      },
+      "model_args": {},
+      "config": {
+        "epochs": 1,
+        "fail_on_error": false,
+        "continue_on_fail": false,
+        "score_on_error": false,
+        "max_samples": 3,
+        "max_tasks": 10,
+        "sandbox_cleanup": true,
+        "log_samples": true,
+        "log_realtime": true,
+        "log_images": true,
+        "score_display": true
+      },
+      "revision": {
+        "type": "git",
+        "origin": "git@github.com:nicknjpconsultingllc/wrench-bench.git",
+        "commit": "224cc9e7",
+        "dirty": true
+      },
+      "packages": {
+        "inspect_ai": "0.3.253"
+      },
+      "scorers": [
+        {
+          "name": "throughput_retained_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "recovery_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "detection_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    "plan": {
+      "name": "plan",
+      "steps": [
+        {
+          "solver": "wrench_solver",
+          "params": {},
+          "params_passed": {}
+        }
+      ],
+      "config": {
+        "max_connections": 3
+      }
+    },
+    "results": {
+      "total_samples": 2,
+      "completed_samples": 2,
+      "scores": [
+        {
+          "name": "throughput_retained_scorer",
+          "scorer": "throughput_retained_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.054907732672032,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "recovery_scorer",
+          "scorer": "recovery_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "detection_scorer",
+          "scorer": "detection_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.5,
+              "params": {}
+            }
+          }
+        }
+      ]
+    },
+    "stats": {
+      "started_at": "2026-08-10T16:54:12+00:00",
+      "completed_at": "2026-08-10T18:51:13+00:00",
+      "model_usage": {
+        "openrouter/google/gemini-2.5-pro": {
+          "input_tokens": 2772331,
+          "output_tokens": 74519,
+          "total_tokens": 3635815,
+          "input_tokens_cache_read": 788965,
+          "reasoning_tokens": 31369
+        }
+      },
+      "role_usage": {},
+      "connection_limit_history": []
+    },
+    "invalidated": false,
+    "tags": [],
+    "metadata": {},
+    "reductions": [
+      {
+        "scorer": "throughput_retained_scorer",
+        "samples": [
+          {
+            "value": 1.0748073201851231,
+            "answer": "1.075",
+            "explanation": "TR pooled over 1 fire(s): 1.075",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "pooled_numerator": 1088.0,
+              "pooled_denominator": 1012.2744603308103,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 1.0748073201851231,
+              "floor_adjusted_pooled_numerator": 1088.0,
+              "floor_adjusted_pooled_denominator": 1012.2744603308103,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 85890572,
+                  "seed": 37,
+                  "horizon_ticks": 212399,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 1088.0,
+                  "expected": 1012.2744603308103,
+                  "tr": 1.0748073201851231,
+                  "floor_actual": 1088.0,
+                  "floor_expected": 1012.2744603308103,
+                  "floor_tr": 1.0748073201851231
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed0"
+          },
+          {
+            "value": 1.035008145158941,
+            "answer": "1.035",
+            "explanation": "TR pooled over 1 fire(s): 1.035",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "pooled_numerator": 1773.0,
+              "pooled_denominator": 1713.0299971965237,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 1.035008145158941,
+              "floor_adjusted_pooled_numerator": 1773.0,
+              "floor_adjusted_pooled_denominator": 1713.0299971965237,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 48242240,
+                  "seed": 38,
+                  "horizon_ticks": 359434,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 1773.0,
+                  "expected": 1713.0299971965237,
+                  "tr": 1.035008145158941,
+                  "floor_actual": 1773.0,
+                  "floor_expected": 1713.0299971965237,
+                  "floor_tr": 1.035008145158941
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "recovery_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "1/1",
+            "explanation": "Recovered 1 of 1 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "recovered": 1,
+              "scoreable_fires": 1,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 85890572,
+                  "seed": 37,
+                  "budget_ticks": 212399,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "1/1",
+            "explanation": "Recovered 1 of 1 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "recovered": 1,
+              "scoreable_fires": 1,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 48242240,
+                  "seed": 38,
+                  "budget_ticks": 359434,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "detection_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "recall=1.00",
+            "explanation": "Detection over 1 fire(s), 2 report(s): recall=1.00, precision_strict=0.00 (loose 0.50)",
+            "metadata": {
+              "precision": 0.5,
+              "precision_strict": 0.0,
+              "recall": 1.0,
+              "latencies": [
+                37518
+              ],
+              "mean_latency_ticks": 37518.0,
+              "matched_reports": 1,
+              "matched_reports_strict": 0,
+              "num_reports": 2,
+              "matched_fires": 1,
+              "num_fires": 1
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed0"
+          },
+          {
+            "value": 0.0,
+            "answer": "recall=0.00",
+            "explanation": "Detection over 1 fire(s), 16 report(s): recall=0.00, precision_strict=0.06 (loose 0.06)",
+            "metadata": {
+              "precision": 0.0625,
+              "precision_strict": 0.0625,
+              "recall": 0.0,
+              "latencies": [
+                3834
+              ],
+              "mean_latency_ticks": 3834.0,
+              "matched_reports": 1,
+              "matched_reports_strict": 1,
+              "num_reports": 16,
+              "matched_fires": 1,
+              "num_fires": 1
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed1"
+          }
+        ]
+      }
+    ]
+  },
+  "2026-08-10T16-54-12-00-00_iron-plate-adaptive-sentinel_SYHbQ7gnEdU6cstgNaKCPa.eval": {
+    "version": 2,
+    "status": "success",
+    "eval": {
+      "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+      "eval_id": "C8XDPYeBVMktoQUKfeJnt5",
+      "run_id": "5KSoP3hnTbzwWXJXRXWSRA",
+      "created": "2026-08-10T16:54:12+00:00",
+      "task": "iron_plate_adaptive_sentinel",
+      "task_id": "SYHbQ7gnEdU6cstgNaKCPa",
+      "task_version": 0,
+      "task_display_name": "iron_plate_adaptive_sentinel",
+      "task_attribs": {},
+      "task_args": {},
+      "task_args_passed": {},
+      "solver_args_passed": {},
+      "dataset": {
+        "samples": 2,
+        "sample_ids": [
+          "iron_plate_adaptive_sentinel_seed0",
+          "iron_plate_adaptive_sentinel_seed1"
+        ],
+        "shuffled": false
+      },
+      "model": "openrouter/openai/gpt-5.1",
+      "model_generate_config": {
+        "max_connections": 3
+      },
+      "model_args": {},
+      "config": {
+        "epochs": 1,
+        "fail_on_error": false,
+        "continue_on_fail": false,
+        "score_on_error": false,
+        "max_samples": 3,
+        "max_tasks": 10,
+        "sandbox_cleanup": true,
+        "log_samples": true,
+        "log_realtime": true,
+        "log_images": true,
+        "score_display": true
+      },
+      "revision": {
+        "type": "git",
+        "origin": "git@github.com:nicknjpconsultingllc/wrench-bench.git",
+        "commit": "224cc9e7",
+        "dirty": true
+      },
+      "packages": {
+        "inspect_ai": "0.3.253"
+      },
+      "scorers": [
+        {
+          "name": "throughput_retained_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "recovery_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "detection_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    "plan": {
+      "name": "plan",
+      "steps": [
+        {
+          "solver": "wrench_solver",
+          "params": {},
+          "params_passed": {}
+        }
+      ],
+      "config": {
+        "max_connections": 3
+      }
+    },
+    "results": {
+      "total_samples": 2,
+      "completed_samples": 2,
+      "scores": [
+        {
+          "name": "throughput_retained_scorer",
+          "scorer": "throughput_retained_scorer",
+          "scored_samples": 0,
+          "unscored_samples": 2,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": NaN,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "recovery_scorer",
+          "scorer": "recovery_scorer",
+          "scored_samples": 0,
+          "unscored_samples": 2,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": NaN,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "detection_scorer",
+          "scorer": "detection_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        }
+      ]
+    },
+    "stats": {
+      "started_at": "2026-08-10T16:54:12+00:00",
+      "completed_at": "2026-08-10T18:23:46+00:00",
+      "model_usage": {
+        "openrouter/openai/gpt-5.1": {
+          "input_tokens": 1748351,
+          "output_tokens": 97750,
+          "total_tokens": 3861717,
+          "input_tokens_cache_read": 2015616,
+          "reasoning_tokens": 0
+        }
+      },
+      "role_usage": {},
+      "connection_limit_history": []
+    },
+    "invalidated": false,
+    "tags": [],
+    "metadata": {},
+    "reductions": [
+      {
+        "scorer": "throughput_retained_scorer",
+        "samples": [
+          {
+            "value": NaN,
+            "answer": "unscoreable",
+            "explanation": "Not scoreable: 0 fire(s), no valid baseline",
+            "metadata": {
+              "scoreable": false,
+              "item": "iron-plate",
+              "num_fires": 0,
+              "pooled_numerator": 0.0,
+              "pooled_denominator": 0.0,
+              "floor_adjusted_scoreable": false,
+              "floor_adjusted_num_fires": 0,
+              "floor_adjusted_pooled": null,
+              "floor_adjusted_pooled_numerator": 0.0,
+              "floor_adjusted_pooled_denominator": 0.0,
+              "fires": []
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed0"
+          },
+          {
+            "value": NaN,
+            "answer": "unscoreable",
+            "explanation": "Not scoreable: 0 fire(s), no valid baseline",
+            "metadata": {
+              "scoreable": false,
+              "item": "iron-plate",
+              "num_fires": 0,
+              "pooled_numerator": 0.0,
+              "pooled_denominator": 0.0,
+              "floor_adjusted_scoreable": false,
+              "floor_adjusted_num_fires": 0,
+              "floor_adjusted_pooled": null,
+              "floor_adjusted_pooled_numerator": 0.0,
+              "floor_adjusted_pooled_denominator": 0.0,
+              "fires": []
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "recovery_scorer",
+        "samples": [
+          {
+            "value": NaN,
+            "answer": "unscoreable",
+            "explanation": "Not scoreable: 0 fire(s), no valid baseline",
+            "metadata": {
+              "scoreable": false,
+              "item": "iron-plate",
+              "num_fires": 0,
+              "recovered": 0,
+              "scoreable_fires": 0,
+              "fires": []
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed0"
+          },
+          {
+            "value": NaN,
+            "answer": "unscoreable",
+            "explanation": "Not scoreable: 0 fire(s), no valid baseline",
+            "metadata": {
+              "scoreable": false,
+              "item": "iron-plate",
+              "num_fires": 0,
+              "recovered": 0,
+              "scoreable_fires": 0,
+              "fires": []
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "detection_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "recall=1.00",
+            "explanation": "Detection over 0 fire(s), 2 report(s): recall=1.00, precision_strict=0.00 (loose 0.00)",
+            "metadata": {
+              "precision": 0.0,
+              "precision_strict": 0.0,
+              "recall": 1.0,
+              "latencies": [],
+              "mean_latency_ticks": null,
+              "matched_reports": 0,
+              "matched_reports_strict": 0,
+              "num_reports": 2,
+              "matched_fires": 0,
+              "num_fires": 0
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "recall=1.00",
+            "explanation": "Detection over 0 fire(s), 0 report(s): recall=1.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 1.0,
+              "latencies": [],
+              "mean_latency_ticks": null,
+              "matched_reports": 0,
+              "matched_reports_strict": 0,
+              "num_reports": 0,
+              "matched_fires": 0,
+              "num_fires": 0
+            },
+            "history": [],
+            "sample_id": "iron_plate_adaptive_sentinel_seed1"
+          }
+        ]
+      }
+    ]
+  },
+  "2026-08-10T16-54-11-00-00_iron-plate-observability-sentinel_SGH2twyc5b3duLsJuTVgLj.eval": {
+    "version": 2,
+    "status": "success",
+    "eval": {
+      "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+      "eval_id": "XreziGFJspWhUippXABd85",
+      "run_id": "5KSoP3hnTbzwWXJXRXWSRA",
+      "created": "2026-08-10T16:54:11+00:00",
+      "task": "iron_plate_observability_sentinel",
+      "task_id": "SGH2twyc5b3duLsJuTVgLj",
+      "task_version": 0,
+      "task_display_name": "iron_plate_observability_sentinel",
+      "task_attribs": {},
+      "task_args": {},
+      "task_args_passed": {},
+      "solver_args_passed": {},
+      "dataset": {
+        "samples": 2,
+        "sample_ids": [
+          "iron_plate_observability_sentinel_seed0",
+          "iron_plate_observability_sentinel_seed1"
+        ],
+        "shuffled": false
+      },
+      "model": "openrouter/anthropic/claude-sonnet-5",
+      "model_generate_config": {
+        "max_connections": 3
+      },
+      "model_args": {},
+      "config": {
+        "epochs": 1,
+        "fail_on_error": false,
+        "continue_on_fail": false,
+        "score_on_error": false,
+        "max_samples": 3,
+        "max_tasks": 10,
+        "sandbox_cleanup": true,
+        "log_samples": true,
+        "log_realtime": true,
+        "log_images": true,
+        "score_display": true
+      },
+      "revision": {
+        "type": "git",
+        "origin": "git@github.com:nicknjpconsultingllc/wrench-bench.git",
+        "commit": "224cc9e7",
+        "dirty": true
+      },
+      "packages": {
+        "inspect_ai": "0.3.253"
+      },
+      "scorers": [
+        {
+          "name": "throughput_retained_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "recovery_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "detection_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    "plan": {
+      "name": "plan",
+      "steps": [
+        {
+          "solver": "wrench_solver",
+          "params": {},
+          "params_passed": {}
+        }
+      ],
+      "config": {
+        "max_connections": 3
+      }
+    },
+    "results": {
+      "total_samples": 2,
+      "completed_samples": 2,
+      "scores": [
+        {
+          "name": "throughput_retained_scorer",
+          "scorer": "throughput_retained_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.5,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "recovery_scorer",
+          "scorer": "recovery_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "detection_scorer",
+          "scorer": "detection_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.0,
+              "params": {}
+            }
+          }
+        }
+      ]
+    },
+    "stats": {
+      "started_at": "2026-08-10T16:54:12+00:00",
+      "completed_at": "2026-08-10T18:17:55+00:00",
+      "model_usage": {
+        "openrouter/anthropic/claude-sonnet-5": {
+          "input_tokens": 1961322,
+          "output_tokens": 63942,
+          "total_tokens": 5057648,
+          "input_tokens_cache_write": 47381,
+          "input_tokens_cache_read": 2985003,
+          "reasoning_tokens": 9683
+        }
+      },
+      "role_usage": {},
+      "connection_limit_history": []
+    },
+    "invalidated": false,
+    "tags": [],
+    "metadata": {},
+    "reductions": [
+      {
+        "scorer": "throughput_retained_scorer",
+        "samples": [
+          {
+            "value": 1.5,
+            "answer": "1.500",
+            "explanation": "TR pooled over 1 fire(s): 1.500",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "pooled_numerator": 2440.0,
+              "pooled_denominator": 1144.9335576114383,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 1.5,
+              "floor_adjusted_pooled_numerator": 1867.533221194281,
+              "floor_adjusted_pooled_denominator": 572.4667788057192,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 47761843,
+                  "seed": 11,
+                  "horizon_ticks": 240234,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 2440.0,
+                  "expected": 1144.9335576114383,
+                  "tr": 1.5,
+                  "floor_actual": 1867.533221194281,
+                  "floor_expected": 572.4667788057192,
+                  "floor_tr": 1.5
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed0"
+          },
+          {
+            "value": 1.5,
+            "answer": "1.500",
+            "explanation": "TR pooled over 1 fire(s): 1.500",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "pooled_numerator": 4183.0,
+              "pooled_denominator": 1358.8609475749931,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 1.5,
+              "floor_adjusted_pooled_numerator": 3503.5695262125037,
+              "floor_adjusted_pooled_denominator": 679.4304737874966,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 85577250,
+                  "seed": 12,
+                  "horizon_ticks": 285121,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 4183.0,
+                  "expected": 1358.8609475749931,
+                  "tr": 1.5,
+                  "floor_actual": 3503.5695262125037,
+                  "floor_expected": 679.4304737874966,
+                  "floor_tr": 1.5
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "recovery_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "1/1",
+            "explanation": "Recovered 1 of 1 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "recovered": 1,
+              "scoreable_fires": 1,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 47761843,
+                  "seed": 11,
+                  "budget_ticks": 240234,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "1/1",
+            "explanation": "Recovered 1 of 1 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "recovered": 1,
+              "scoreable_fires": 1,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 85577250,
+                  "seed": 12,
+                  "budget_ticks": 285121,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "detection_scorer",
+        "samples": [
+          {
+            "value": 0.0,
+            "answer": "recall=0.00",
+            "explanation": "Detection over 1 fire(s), 0 report(s): recall=0.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 0.0,
+              "latencies": [],
+              "mean_latency_ticks": null,
+              "matched_reports": 0,
+              "matched_reports_strict": 0,
+              "num_reports": 0,
+              "matched_fires": 0,
+              "num_fires": 1
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed0"
+          },
+          {
+            "value": 0.0,
+            "answer": "recall=0.00",
+            "explanation": "Detection over 1 fire(s), 0 report(s): recall=0.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 0.0,
+              "latencies": [],
+              "mean_latency_ticks": null,
+              "matched_reports": 0,
+              "matched_reports_strict": 0,
+              "num_reports": 0,
+              "matched_fires": 0,
+              "num_fires": 1
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed1"
+          }
+        ]
+      }
+    ]
+  },
+  "2026-08-10T16-54-12-00-00_iron-plate-observability-sentinel_AGsEAkyj2C4XKdkQUwmDzt.eval": {
+    "version": 2,
+    "status": "success",
+    "eval": {
+      "eval_set_id": "VdEhgyuDkXdhQn4NnUF3qw",
+      "eval_id": "oKFb7JxVci8RQBgPijhEYT",
+      "run_id": "5KSoP3hnTbzwWXJXRXWSRA",
+      "created": "2026-08-10T16:54:12+00:00",
+      "task": "iron_plate_observability_sentinel",
+      "task_id": "AGsEAkyj2C4XKdkQUwmDzt",
+      "task_version": 0,
+      "task_display_name": "iron_plate_observability_sentinel",
+      "task_attribs": {},
+      "task_args": {},
+      "task_args_passed": {},
+      "solver_args_passed": {},
+      "dataset": {
+        "samples": 2,
+        "sample_ids": [
+          "iron_plate_observability_sentinel_seed0",
+          "iron_plate_observability_sentinel_seed1"
+        ],
+        "shuffled": false
+      },
+      "model": "openrouter/openai/gpt-5.1",
+      "model_generate_config": {
+        "max_connections": 3
+      },
+      "model_args": {},
+      "config": {
+        "epochs": 1,
+        "fail_on_error": false,
+        "continue_on_fail": false,
+        "score_on_error": false,
+        "max_samples": 3,
+        "max_tasks": 10,
+        "sandbox_cleanup": true,
+        "log_samples": true,
+        "log_realtime": true,
+        "log_images": true,
+        "score_display": true
+      },
+      "revision": {
+        "type": "git",
+        "origin": "git@github.com:nicknjpconsultingllc/wrench-bench.git",
+        "commit": "224cc9e7",
+        "dirty": true
+      },
+      "packages": {
+        "inspect_ai": "0.3.253"
+      },
+      "scorers": [
+        {
+          "name": "throughput_retained_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "recovery_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        },
+        {
+          "name": "detection_scorer",
+          "options": {},
+          "metrics": [
+            {
+              "name": "inspect_ai/mean",
+              "options": {}
+            }
+          ],
+          "metadata": {}
+        }
+      ]
+    },
+    "plan": {
+      "name": "plan",
+      "steps": [
+        {
+          "solver": "wrench_solver",
+          "params": {},
+          "params_passed": {}
+        }
+      ],
+      "config": {
+        "max_connections": 3
+      }
+    },
+    "results": {
+      "total_samples": 2,
+      "completed_samples": 2,
+      "scores": [
+        {
+          "name": "throughput_retained_scorer",
+          "scorer": "throughput_retained_scorer",
+          "scored_samples": 1,
+          "unscored_samples": 1,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 0.8929509414646993,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "recovery_scorer",
+          "scorer": "recovery_scorer",
+          "scored_samples": 1,
+          "unscored_samples": 1,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        },
+        {
+          "name": "detection_scorer",
+          "scorer": "detection_scorer",
+          "scored_samples": 2,
+          "unscored_samples": 0,
+          "params": {},
+          "metrics": {
+            "mean": {
+              "name": "mean",
+              "value": 1.0,
+              "params": {}
+            }
+          }
+        }
+      ]
+    },
+    "stats": {
+      "started_at": "2026-08-10T16:54:12+00:00",
+      "completed_at": "2026-08-10T17:46:59+00:00",
+      "model_usage": {
+        "openrouter/openai/gpt-5.1": {
+          "input_tokens": 1116077,
+          "output_tokens": 47973,
+          "total_tokens": 3145874,
+          "input_tokens_cache_read": 1981824,
+          "reasoning_tokens": 0
+        }
+      },
+      "role_usage": {},
+      "connection_limit_history": []
+    },
+    "invalidated": false,
+    "tags": [],
+    "metadata": {},
+    "reductions": [
+      {
+        "scorer": "throughput_retained_scorer",
+        "samples": [
+          {
+            "value": NaN,
+            "answer": "unscoreable",
+            "explanation": "Not scoreable: 0 fire(s), no valid baseline",
+            "metadata": {
+              "scoreable": false,
+              "item": "iron-plate",
+              "num_fires": 0,
+              "pooled_numerator": 0.0,
+              "pooled_denominator": 0.0,
+              "floor_adjusted_scoreable": false,
+              "floor_adjusted_num_fires": 0,
+              "floor_adjusted_pooled": null,
+              "floor_adjusted_pooled_numerator": 0.0,
+              "floor_adjusted_pooled_denominator": 0.0,
+              "fires": []
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed0"
+          },
+          {
+            "value": 0.8929509414646993,
+            "answer": "0.893",
+            "explanation": "TR pooled over 1 fire(s): 0.893",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "pooled_numerator": 806.0,
+              "pooled_denominator": 902.6251752172695,
+              "floor_adjusted_scoreable": true,
+              "floor_adjusted_num_fires": 1,
+              "floor_adjusted_pooled": 0.8929509414646993,
+              "floor_adjusted_pooled_numerator": 806.0,
+              "floor_adjusted_pooled_denominator": 902.6251752172695,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 42434631,
+                  "seed": 12,
+                  "horizon_ticks": 189392,
+                  "baseline_per_min": 17.157275021026074,
+                  "actual": 806.0,
+                  "expected": 902.6251752172695,
+                  "tr": 0.8929509414646993,
+                  "floor_actual": 806.0,
+                  "floor_expected": 902.6251752172695,
+                  "floor_tr": 0.8929509414646993
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "recovery_scorer",
+        "samples": [
+          {
+            "value": NaN,
+            "answer": "unscoreable",
+            "explanation": "Not scoreable: 0 fire(s), no valid baseline",
+            "metadata": {
+              "scoreable": false,
+              "item": "iron-plate",
+              "num_fires": 0,
+              "recovered": 0,
+              "scoreable_fires": 0,
+              "fires": []
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "1/1",
+            "explanation": "Recovered 1 of 1 scoreable fire(s)",
+            "metadata": {
+              "scoreable": true,
+              "item": "iron-plate",
+              "num_fires": 1,
+              "recovered": 1,
+              "scoreable_fires": 1,
+              "fires": [
+                {
+                  "kind": "entity_destruction",
+                  "tick": 42434631,
+                  "seed": 12,
+                  "budget_ticks": 189392,
+                  "recovered": true
+                }
+              ]
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed1"
+          }
+        ]
+      },
+      {
+        "scorer": "detection_scorer",
+        "samples": [
+          {
+            "value": 1.0,
+            "answer": "recall=1.00",
+            "explanation": "Detection over 0 fire(s), 0 report(s): recall=1.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 1.0,
+              "latencies": [],
+              "mean_latency_ticks": null,
+              "matched_reports": 0,
+              "matched_reports_strict": 0,
+              "num_reports": 0,
+              "matched_fires": 0,
+              "num_fires": 0
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed0"
+          },
+          {
+            "value": 1.0,
+            "answer": "recall=1.00",
+            "explanation": "Detection over 1 fire(s), 1 report(s): recall=1.00, precision_strict=1.00 (loose 1.00)",
+            "metadata": {
+              "precision": 1.0,
+              "precision_strict": 1.0,
+              "recall": 1.0,
+              "latencies": [
+                86115
+              ],
+              "mean_latency_ticks": 86115.0,
+              "matched_reports": 1,
+              "matched_reports_strict": 1,
+              "num_reports": 1,
+              "matched_fires": 1,
+              "num_fires": 1
+            },
+            "history": [],
+            "sample_id": "iron_plate_observability_sentinel_seed1"
+          }
+        ]
+      }
+    ]
+  }
+}

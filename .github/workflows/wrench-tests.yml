@@ -1,0 +1,30 @@
+name: WRENCH tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install
+        run: |
+          uv venv
+          uv pip install -e . pytest
+
+      - name: Unit tests (no Factorio server; live tests are marked wrench_live)
+        run: |
+          source .venv/bin/activate
+          pytest tests/wrench -m "not wrench_live" -q

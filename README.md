@@ -19,7 +19,7 @@ measures, against ground truth the agent never sees:
 | Metric | Question it answers |
 |---|---|
 | **Detection** (precision / recall / latency) | Did the agent notice, how fast, and does it report real faults or hallucinate them? Detection is an overt act: the agent declares faults via a `report_fault` tool. Headline precision uses a strict 3-tile match radius — pilot analysis showed a loose radius credits unrelated nearby reports (an agent scored recall 1.0 on a disruption it demonstrably never noticed; see [the failure taxonomy](docs/failure_taxonomy.md)). |
-| **Throughput Retained (TR)** | How much production survived, as a pooled ratio against the factory's own frozen pre-disruption rate — 0 = did no better than abandoning it, 1 = full recovery, winsorized to [-0.5, 1.5]. |
+| **Throughput Retained (TR)** | How much production survived, as a pooled ratio against the factory's own frozen pre-disruption rate — 0 = did no better than abandoning it, 1 = full recovery, winsorized to [-0.5, 1.5]. Reported with two companions: **TR (raw)**, the unclamped ratio (the strongest model regularly exceeds the cap), and **TR (floor-adj)**, which subtracts the throughput a no-op agent would have kept from passive redundancy, using a count fixed before the fault fires so nothing the agent does afterward can move it. Floor-adjusted TR below zero means the agent's activity cost more than doing nothing. |
 | **Recovery rate at budget** | Did throughput return to ≥90% of baseline within a fixed game-tick budget, sustained? Reported as a proportion — no censoring pathology. |
 
 The metrics are validated by construction before any LLM touches them: a
@@ -54,8 +54,11 @@ injection conditions.
 Disruption kinds are held to a **floor acceptance test**: with a no-op agent,
 post-injection throughput must fall to ≤0.2× baseline over the measurement
 window — a disruption the factory shrugs off by itself doesn't measure
-recovery and doesn't ship. v1 kinds: `entity_destruction`, `belt_cut`,
-`resource_exhaustion` (all permanent, all deterministic per seed).
+recovery and doesn't ship. Kinds: `entity_destruction`, `belt_cut`,
+`resource_exhaustion`, and `adaptive_strike`, which inspects the agent's actual
+build at fire time and destroys the most load-bearing powered entity (on a
+burner-only build it resolves `not_applicable` and is recorded as such). All
+permanent, all deterministic per seed.
 
 Two honest edges, learned from pilot runs and reported rather than hidden:
 
@@ -111,7 +114,7 @@ build time (never redistributed, per [Wube's ToS](https://www.factorio.com/terms
 uv venv --python 3.12 && source .venv/bin/activate
 uv pip install -e .
 fle cluster start -n 1          # one headless Factorio server (RCON :27000)
-pytest tests/wrench -q          # 30 unit tests, no server needed
+pytest tests/wrench -m "not wrench_live" -q   # 107 unit tests, no server needed
 pytest tests/wrench -m wrench_live -q   # engine + bracketing vs the live server
 ```
 
@@ -122,7 +125,9 @@ Run a sentinel task with a Claude model driven by the Claude Code CLI
 python scripts/wrench_pilot.py --task iron_plate_sentinel --model sonnet --steps 32
 ```
 
-Tasks: `iron_plate_sentinel`, `iron_gear_sentinel`, `copper_cable_sentinel`.
+Tasks: `iron_plate_sentinel`, `iron_gear_sentinel`, `copper_cable_sentinel`,
+`iron_plate_observability_sentinel`, `iron_plate_adaptive_sentinel`,
+`iron_plate_scarcity_sentinel`.
 Published comparisons run through [Inspect AI](https://inspect.aisi.org.uk/)
 with API-key providers so every model row shares one harness.
 
@@ -144,9 +149,21 @@ relevant for years — resolving power and headroom are):
   tech, genuinely scarce resources, so losing something to a disruption has
   real cost.
 
-In progress: calibration pilots on the three new families, the first
-multi-model comparison table. Numbers published here will always ship with
-their ledgers and trajectories for independent re-scoring.
+First comparison table: GPT-5.1, Gemini 2.5 Pro and Claude Sonnet 5 on the
+three durability families, two seeds each, through Inspect on OpenRouter
+([results](table_runs/20260810T125411/results.md), ledgers and `.eval` logs
+alongside). It discriminates: GPT-5.1 never reached quota on the adaptive
+task, so no fault ever fired; Gemini detected most faults at a strict
+precision of 0.06-0.25; floor-adjusted TR put two model/task cells below
+zero. Two seeds is a pilot, not a result; the design target is k=5 with
+cluster-bootstrap CIs ([benchmark design](docs/benchmark_design.md)).
+
+Before that run, the scoring and harness went through seven rounds of
+adversarial review: 16 findings fixed, among them three reward-hacking paths
+and a Lua-injection RCE in FLE's shared tool layer. The full log is
+[docs/hardening.md](docs/hardening.md); agent failure modes are in
+[docs/failure_taxonomy.md](docs/failure_taxonomy.md). Numbers published here
+ship with their ledgers and trajectories for independent re-scoring.
 
 The upstream FLE README is preserved at
 [docs/FLE_UPSTREAM_README.md](docs/FLE_UPSTREAM_README.md).
