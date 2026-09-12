@@ -84,7 +84,9 @@ def _reset_between_tests():
 
 @pytest.fixture(autouse=True)
 def _reset(adaptive_instance):
-    adaptive_instance.initial_inventory = dict(adaptive_instance.default_initial_inventory)
+    adaptive_instance.initial_inventory = dict(
+        adaptive_instance.default_initial_inventory
+    )
     adaptive_instance.reset(reset_position=True)
     adaptive_instance.set_speed(10.0)
     # reset()'s clear_entities only clears what the normal game systems
@@ -167,12 +169,8 @@ def build_fragile_factory(game, instance=None, powered=False):
     the entities to exist).
     """
     game.move_to(Position(x=0, y=0))
-    pole = game.place_entity(
-        Prototype.SmallElectricPole, position=Position(x=0, y=-2)
-    )
-    furnace = game.place_entity(
-        Prototype.ElectricFurnace, position=Position(x=0, y=0)
-    )
+    pole = game.place_entity(Prototype.SmallElectricPole, position=Position(x=0, y=-2))
+    furnace = game.place_entity(Prototype.ElectricFurnace, position=Position(x=0, y=0))
     game.insert_item(Prototype.IronOre, furnace, quantity=190)
     if powered:
         add_power_source(instance, (pole.position.x, pole.position.y - 1))

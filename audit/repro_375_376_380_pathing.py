@@ -33,9 +33,7 @@ from _common import connect, lua, Reporter
 def repro_375(inst):
     r = Reporter("#375", "pathfinding treats belts as obstacles")
     ns = inst.namespace
-    from fle.env.game_types import Prototype
     from fle.env.entities import Position
-    from fle.env import Direction
 
     # Build a closed ring of belts around (12, 0): perimeter of the square
     # x,y in [9.5, 14.5] -> interior tiles are free, ring is 1 belt thick.
@@ -103,7 +101,11 @@ def repro_375(inst):
         if reproduced
         else "move_to reached the belt-enclosed target: the collision_mask does list "
         "transport_belt (raw request without the own-entities flag says "
-        + ("not_found -> belts ARE obstacles to the mask" if mask_blocks else f"{status}")
+        + (
+            "not_found -> belts ARE obstacles to the mask"
+            if mask_blocks
+            else f"{status}"
+        )
         + "), but move_to always sets allow_paths_through_own_entities=True, which "
         "masks the problem for own-force belts",
     )
@@ -212,12 +214,16 @@ def repro_380(inst):
     error = None
     try:
         placed = ns.place_entity(Prototype.StoneFurnace, Direction.UP, spot)
-        r.note(f"place_entity(stone-furnace at (30.5,30.5)) SUCCEEDED at {placed.position}")
+        r.note(
+            f"place_entity(stone-furnace at (30.5,30.5)) SUCCEEDED at {placed.position}"
+        )
     except Exception as e:
         error = str(e)
         r.note(f"place_entity(stone-furnace at (30.5,30.5)) raised: {error}")
 
-    misleading = error is not None and "in the way" in error and "grid" not in error.lower()
+    misleading = (
+        error is not None and "in the way" in error and "grid" not in error.lower()
+    )
     r.verdict(
         misleading,
         "in an empty area, a half-integer 2x2 placement fails with a collision-style "

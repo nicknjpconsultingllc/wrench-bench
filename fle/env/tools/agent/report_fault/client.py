@@ -15,5 +15,7 @@ class ReportFault(Tool):
         :param cause: Short description, e.g. "furnace destroyed", "belt gap"
         :return: True when the report was recorded
         """
-        response, _ = self.execute(self.player_index, position.x, position.y, str(cause))
+        response, _ = self.execute(
+            self.player_index, position.x, position.y, str(cause)
+        )
         return isinstance(response, dict)

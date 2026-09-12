@@ -42,9 +42,7 @@ def build_two_furnace_factory(game):
     game.move_to(Position(x=0, y=0))
     furnaces = []
     for x, y in FURNACE_POSITIONS:
-        furnace = game.place_entity(
-            Prototype.StoneFurnace, position=Position(x=x, y=y)
-        )
+        furnace = game.place_entity(Prototype.StoneFurnace, position=Position(x=x, y=y))
         furnace = game.insert_item(Prototype.Coal, furnace, quantity=150)
         furnace = game.insert_item(Prototype.IronOre, furnace, quantity=190)
         furnaces.append(furnace)
@@ -85,9 +83,7 @@ def sleep_ticks(game, instance, until_tick, margin_ticks=200):
     """Sleep game-time until game.tick passes until_tick (+margin)."""
     while True:
         current = int(
-            instance.rcon_client.send_command(
-                "/silent-command rcon.print(game.tick)"
-            )
+            instance.rcon_client.send_command("/silent-command rcon.print(game.tick)")
         )
         if current >= until_tick + margin_ticks:
             return current

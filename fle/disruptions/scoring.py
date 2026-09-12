@@ -707,9 +707,7 @@ def detection_counts(
         # Recall bookkeeping: was this fire reported at all? Deliberately
         # NOT scoped to `consumed_loose` -- see the docstring.
         matching_ticks = [
-            tick
-            for tick, pos in report_info
-            if _matches(tick, pos, fire, radius)
+            tick for tick, pos in report_info if _matches(tick, pos, fire, radius)
         ]
         if matching_ticks:
             matched_fires += 1
@@ -731,8 +729,7 @@ def detection_counts(
         strict_candidates = [
             (tick, idx)
             for idx, (tick, pos) in enumerate(report_info)
-            if idx not in consumed_strict
-            and _matches(tick, pos, fire, strict_radius)
+            if idx not in consumed_strict and _matches(tick, pos, fire, strict_radius)
         ]
         if strict_candidates:
             _, earliest_strict_idx = min(strict_candidates)
@@ -787,9 +784,7 @@ def detection_metrics(
     c = detection_counts(ledger_entries, fire_events, radius)
     num_reports = c["num_reports"]
     precision = c["matched_reports"] / num_reports if num_reports else 1.0
-    precision_strict = (
-        c["matched_reports_strict"] / num_reports if num_reports else 1.0
-    )
+    precision_strict = c["matched_reports_strict"] / num_reports if num_reports else 1.0
     recall = c["matched_fires"] / c["num_fires"] if c["num_fires"] else 1.0
     if c["num_fires"] and precision < precision_floor:
         recall = 0.0

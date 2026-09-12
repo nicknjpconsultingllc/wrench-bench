@@ -82,7 +82,11 @@ def _item(data: WrenchData) -> str:
 
 
 def _fire_summary(fire: dict) -> dict:
-    return {"kind": fire.get("kind"), "tick": fire.get("tick"), "seed": fire.get("seed")}
+    return {
+        "kind": fire.get("kind"),
+        "tick": fire.get("tick"),
+        "seed": fire.get("seed"),
+    }
 
 
 @scorer(metrics=[mean()])
@@ -268,13 +272,16 @@ def detection_scorer() -> Scorer:
                 "recall": metrics["recall"],
                 "latencies": latencies,
                 "mean_latency_ticks": mean_latency,
-                **{k: counts[k] for k in (
-                    "matched_reports",
-                    "matched_reports_strict",
-                    "num_reports",
-                    "matched_fires",
-                    "num_fires",
-                )},
+                **{
+                    k: counts[k]
+                    for k in (
+                        "matched_reports",
+                        "matched_reports_strict",
+                        "num_reports",
+                        "matched_fires",
+                        "num_fires",
+                    )
+                },
             },
         )
 

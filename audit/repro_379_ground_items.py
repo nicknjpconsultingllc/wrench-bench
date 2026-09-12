@@ -39,12 +39,12 @@ def main():
         # Drop items on the ground inside the 2x2 footprint of a furnace at (3,3)
         out = lua(
             inst,
-            'local s = game.surfaces[1] '
-            'for _, p in pairs({{x=3.2,y=3.2},{x=2.6,y=2.6},{x=3.4,y=2.8}}) do '
+            "local s = game.surfaces[1] "
+            "for _, p in pairs({{x=3.2,y=3.2},{x=2.6,y=2.6},{x=3.4,y=2.8}}) do "
             's.create_entity{name="item-on-ground", position=p, '
             'stack={name="iron-plate", count=7}} end '
             'local found = s.find_entities_filtered{area={{2,2},{4,4}}, type="item-entity"} '
-            'local desc = {} '
+            "local desc = {} "
             'for _, e in pairs(found) do table.insert(desc, e.stack.name.."x"..e.stack.count..'
             '"@("..e.position.x..","..e.position.y..") force="..e.force.name) end '
             "rcon.print(#found .. ' item-entities: ' .. table.concat(desc, '; '))",
@@ -54,9 +54,7 @@ def main():
 
         ents = ns.get_entities(position=Position(x=3, y=3), radius=5)
         r.note(f"get_entities(position=(3,3), radius=5) -> {ents!r}")
-        ground_items_visible = any(
-            "item" in getattr(e, "name", "") for e in ents
-        )
+        ground_items_visible = any("item" in getattr(e, "name", "") for e in ents)
 
         can_place = ns.can_place_entity(
             Prototype.StoneFurnace, Direction.UP, Position(x=3, y=3)

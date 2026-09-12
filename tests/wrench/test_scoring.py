@@ -60,9 +60,7 @@ def slow_recovery():
     5400 ticks, then back to 40/min -- an "organic regrowth" curve that
     eventually crosses the recovery threshold, just much later than
     ``drop_and_recovery``'s step-function snap-back."""
-    return make_samples(
-        [(FIRE_TICK, 40.0), (1800, 0.0), (5400, 10.0), (9000, 40.0)]
-    )
+    return make_samples([(FIRE_TICK, 40.0), (1800, 0.0), (5400, 10.0), (9000, 40.0)])
 
 
 class TestThroughputSeries:
@@ -93,9 +91,7 @@ class TestFrozenBaseline:
         baseline = frozen_baseline(drop_and_recovery, "iron-plate", FIRE_TICK)
         assert baseline == pytest.approx(40.0, rel=0.05)
 
-    def test_frozen_against_post_fire_behavior(
-        self, drop_and_recovery, never_recovers
-    ):
+    def test_frozen_against_post_fire_behavior(self, drop_and_recovery, never_recovers):
         # The baseline only looks backwards: identical pre-fire curves give
         # identical baselines regardless of what happens after.
         b1 = frozen_baseline(drop_and_recovery, "iron-plate", FIRE_TICK)
@@ -141,7 +137,9 @@ class TestThroughputRetained:
         assert throughput_retained([], "iron-plate", FIRE_TICK, 3600) is None
 
 
-def _fire_event(kind="entity_destruction", same_type_total=2, tick=FIRE_TICK, name="stone-furnace"):
+def _fire_event(
+    kind="entity_destruction", same_type_total=2, tick=FIRE_TICK, name="stone-furnace"
+):
     """A minimal ledger 'fired' entry carrying the redundancy count
     server.lua's KINDS.entity_destruction stashes on its manifest entry
     (fle/env/tools/admin/inject_disruption/server.lua). Mirrors the real
@@ -244,7 +242,11 @@ class TestFloorAdjustedThroughputRetained:
 
     def test_empty_affected_is_none(self, drop_and_recovery):
         fire = LedgerEntry(
-            tick=FIRE_TICK, event="fired", kind="entity_destruction", seed=0, affected=[]
+            tick=FIRE_TICK,
+            event="fired",
+            kind="entity_destruction",
+            seed=0,
+            affected=[],
         )
         assert (
             floor_adjusted_throughput_retained_parts(
@@ -347,9 +349,7 @@ class TestFloorAdjustedClosesSelfSabotageExploit:
         sabotage = make_samples([(FIRE_TICK, 40.0), (half, 0.0), (half, 40.0)])
 
         def naive_plateau_adjusted_tr(samples):
-            plain = throughput_retained_parts(
-                samples, "iron-plate", FIRE_TICK, horizon
-            )
+            plain = throughput_retained_parts(samples, "iron-plate", FIRE_TICK, horizon)
             actual, expected = plain
             post = [s for s in samples if s["tick"] >= FIRE_TICK]
             series = throughput_series(post, "iron-plate", window_ticks=900)
@@ -387,27 +387,19 @@ class TestRecoveryAt:
         # Dead 1800 ticks, then full rate. The trailing window (1800) needs
         # ~1800 more ticks at full rate before the rate crosses 0.9x, so a
         # 7200-tick budget comfortably contains recovery.
-        assert (
-            recovery_at(drop_and_recovery, "iron-plate", FIRE_TICK, 7200) is True
-        )
+        assert recovery_at(drop_and_recovery, "iron-plate", FIRE_TICK, 7200) is True
 
     def test_not_within_a_tight_budget(self, drop_and_recovery):
         # A budget shorter than the trailing window has no valid post-fire
         # rate points (windows straddling the fire are excluded by design),
         # so recovery cannot be claimed.
-        assert (
-            recovery_at(drop_and_recovery, "iron-plate", FIRE_TICK, 1600) is False
-        )
+        assert recovery_at(drop_and_recovery, "iron-plate", FIRE_TICK, 1600) is False
         # And with a budget that covers the dead zone but not the refill of
         # the trailing window, the rate has not yet crossed 0.9x baseline.
-        assert (
-            recovery_at(drop_and_recovery, "iron-plate", FIRE_TICK, 3000) is False
-        )
+        assert recovery_at(drop_and_recovery, "iron-plate", FIRE_TICK, 3000) is False
 
     def test_never_recovers(self, never_recovers):
-        assert (
-            recovery_at(never_recovers, "iron-plate", FIRE_TICK, 9000) is False
-        )
+        assert recovery_at(never_recovers, "iron-plate", FIRE_TICK, 9000) is False
 
     def test_near_zero_baseline_returns_none(self):
         samples = make_samples([(FIRE_TICK, 0.0), (3600, 40.0)])
@@ -420,9 +412,7 @@ class TestTimeToRecovery:
     same `True` regardless of how many ticks each one took."""
 
     def test_clean_fast_recovery(self, drop_and_recovery):
-        parts = time_to_recovery_parts(
-            drop_and_recovery, "iron-plate", FIRE_TICK, 7200
-        )
+        parts = time_to_recovery_parts(drop_and_recovery, "iron-plate", FIRE_TICK, 7200)
         assert parts["recovered"] is True
         assert parts["budget_ticks"] == 7200
         # Dead for 1800 ticks, then the trailing window (1800) needs to fill
@@ -471,18 +461,12 @@ class TestTimeToRecovery:
         # time_to_recovery_parts' `recovered` flag must agree with
         # recovery_at's boolean for the same inputs (parts is a strict
         # refinement, not a different notion of "recovered").
-        assert (
-            time_to_recovery_parts(drop_and_recovery, "iron-plate", FIRE_TICK, 7200)[
-                "recovered"
-            ]
-            == recovery_at(drop_and_recovery, "iron-plate", FIRE_TICK, 7200)
-        )
-        assert (
-            time_to_recovery_parts(never_recovers, "iron-plate", FIRE_TICK, 9000)[
-                "recovered"
-            ]
-            == recovery_at(never_recovers, "iron-plate", FIRE_TICK, 9000)
-        )
+        assert time_to_recovery_parts(drop_and_recovery, "iron-plate", FIRE_TICK, 7200)[
+            "recovered"
+        ] == recovery_at(drop_and_recovery, "iron-plate", FIRE_TICK, 7200)
+        assert time_to_recovery_parts(never_recovers, "iron-plate", FIRE_TICK, 9000)[
+            "recovered"
+        ] == recovery_at(never_recovers, "iron-plate", FIRE_TICK, 9000)
 
 
 @pytest.fixture
@@ -490,9 +474,7 @@ def touch_and_abandon():
     """40/min until FIRE_TICK, dead 1800 ticks, a full-rate spike for 2400
     ticks (long enough to fully fill the 1800-tick trailing window), then
     dead again for good -- "touch the baseline once, then abandon it"."""
-    return make_samples(
-        [(FIRE_TICK, 40.0), (1800, 0.0), (2400, 40.0), (5400, 0.0)]
-    )
+    return make_samples([(FIRE_TICK, 40.0), (1800, 0.0), (2400, 40.0), (5400, 0.0)])
 
 
 class TestRecoveryPotential:
@@ -506,11 +488,15 @@ class TestRecoveryPotential:
         # lets orchestration reset "phi_prev" to 0 on a new fire without a
         # separately stored scalar (see fle/eval/inspect/wrench.py).
         for samples in (drop_and_recovery, never_recovers):
-            assert recovery_potential(samples, "iron-plate", FIRE_TICK, FIRE_TICK) == 0.0
+            assert (
+                recovery_potential(samples, "iron-plate", FIRE_TICK, FIRE_TICK) == 0.0
+            )
 
     def test_tick_before_fire_returns_none(self, drop_and_recovery):
         assert (
-            recovery_potential(drop_and_recovery, "iron-plate", FIRE_TICK, FIRE_TICK - 100)
+            recovery_potential(
+                drop_and_recovery, "iron-plate", FIRE_TICK, FIRE_TICK - 100
+            )
             is None
         )
 
@@ -574,13 +560,13 @@ class TestShapedRewardDelta:
         """
         samples = drop_and_recovery
         item = "iron-plate"
-        post_fire_ticks = sorted(
-            s["tick"] for s in samples if s["tick"] >= FIRE_TICK
-        )
+        post_fire_ticks = sorted(s["tick"] for s in samples if s["tick"] >= FIRE_TICK)
         end_tick = post_fire_ticks[-1]
 
         # One big jump: a single delta spanning the whole span.
-        coarse_total = shaped_reward_delta(samples, item, FIRE_TICK, FIRE_TICK, end_tick)
+        coarse_total = shaped_reward_delta(
+            samples, item, FIRE_TICK, FIRE_TICK, end_tick
+        )
         assert coarse_total is not None
 
         # Many tiny steps: a delta for every consecutive pair of post-fire
@@ -616,11 +602,15 @@ class TestShapedRewardDelta:
         phi_peak = recovery_potential(samples, item, FIRE_TICK, peak_tick)
         phi_final = recovery_potential(samples, item, FIRE_TICK, final_tick)
         assert phi_peak == pytest.approx(1.0, abs=0.1)  # briefly touched baseline
-        assert phi_final == pytest.approx(0.0, abs=0.1)  # abandoned -- decayed back down
+        assert phi_final == pytest.approx(
+            0.0, abs=0.1
+        )  # abandoned -- decayed back down
 
         # The delta covering the abandonment must be negative, and it must
         # exactly cancel the credit banked during the spike.
-        late_delta = shaped_reward_delta(samples, item, FIRE_TICK, peak_tick, final_tick)
+        late_delta = shaped_reward_delta(
+            samples, item, FIRE_TICK, peak_tick, final_tick
+        )
         assert late_delta is not None
         assert late_delta < 0
         assert phi_peak + late_delta == pytest.approx(phi_final, abs=1e-9)
@@ -662,13 +652,15 @@ class TestShapedRewardDelta:
 
 
 def fired(tick, affected):
-    return LedgerEntry(tick=tick, event="fired", kind="entity_destruction",
-                       seed=1, affected=affected)
+    return LedgerEntry(
+        tick=tick, event="fired", kind="entity_destruction", seed=1, affected=affected
+    )
 
 
 def report(tick, x, y, cause="looks broken"):
-    return LedgerEntry(tick=tick, event="report_fault",
-                       detail={"x": x, "y": y, "cause": cause})
+    return LedgerEntry(
+        tick=tick, event="report_fault", detail={"x": x, "y": y, "cause": cause}
+    )
 
 
 class TestDetectionMetrics:
@@ -684,8 +676,8 @@ class TestDetectionMetrics:
         fire = fired(6000, [{"name": "stone-furnace", "x": 2.0, "y": 0.0}])
         ledger = [
             fire,
-            report(6500, 2.0, 0.0),        # true positive
-            report(7000, 500.0, 500.0),    # nowhere near anything
+            report(6500, 2.0, 0.0),  # true positive
+            report(7000, 500.0, 500.0),  # nowhere near anything
         ]
         m = detection_metrics(ledger, [fire])
         assert m["precision"] == pytest.approx(0.5)
@@ -832,8 +824,8 @@ class TestDetectionMetrics:
         # reports, each report close to only its own fire -> both credited.
         fire1 = fired(6000, [{"name": "stone-furnace", "x": 0.0, "y": 0.0}])
         fire2 = fired(6500, [{"name": "stone-furnace", "x": 100.0, "y": 0.0}])
-        rep1 = report(6100, 0.0, 0.0)      # close to fire1 only
-        rep2 = report(6600, 100.0, 0.0)    # close to fire2 only
+        rep1 = report(6100, 0.0, 0.0)  # close to fire1 only
+        rep2 = report(6600, 100.0, 0.0)  # close to fire2 only
         c = detection_counts([fire1, fire2, rep1, rep2], [fire1, fire2])
         assert c["matched_reports"] == 2
         assert c["matched_reports_strict"] == 2
@@ -852,7 +844,7 @@ class TestDetectionMetrics:
         fire1 = fired(6000, [{"name": "stone-furnace", "x": 0.0, "y": 0.0}])
         fire2 = fired(6500, [{"name": "stone-furnace", "x": 1.0, "y": 0.0}])
         dedicated = report(6600, 0.0, 0.0)  # matches fire1 only, earlier tick
-        shared = report(7000, 0.5, 0.0)     # matches both fire1 and fire2
+        shared = report(7000, 0.5, 0.0)  # matches both fire1 and fire2
         ledger = [fire1, fire2, dedicated, shared]
         c = detection_counts(ledger, [fire1, fire2])
         assert c["num_reports"] == 2

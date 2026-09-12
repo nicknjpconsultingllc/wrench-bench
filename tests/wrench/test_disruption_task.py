@@ -46,9 +46,13 @@ class TestUnit:
     def test_registry_round_trip_never_leaks_disruption_info(self):
         from fle.eval.tasks.task_definitions.task_registry import create_task
 
-        for key in ("iron_plate_sentinel", "iron_gear_sentinel",
-                    "copper_cable_sentinel", "iron_plate_observability_sentinel",
-                    "iron_plate_adaptive_sentinel"):
+        for key in (
+            "iron_plate_sentinel",
+            "iron_gear_sentinel",
+            "copper_cable_sentinel",
+            "iron_plate_observability_sentinel",
+            "iron_plate_adaptive_sentinel",
+        ):
             task = create_task(key)
             assert isinstance(task, DisruptionRecoveryTask)
             # adaptive_sentinel chains a kind-agnostic entity_destruction
@@ -76,7 +80,11 @@ class TestUnit:
         assert "inspection" in budgeted.goal_description.lower()
         assert "metered" in budgeted.goal_description.lower()
 
-        for key in ("iron_plate_sentinel", "iron_gear_sentinel", "copper_cable_sentinel"):
+        for key in (
+            "iron_plate_sentinel",
+            "iron_gear_sentinel",
+            "copper_cable_sentinel",
+        ):
             unbudgeted = create_task(key)
             assert unbudgeted.observability_budget_n is None
 
@@ -97,9 +105,7 @@ def test_end_to_end_verify_and_ledger(instance, tmp_path):
         {"stone-furnace": 4, "coal": 800, "iron-ore": 800}
     )
     for x in (2, 6):
-        furnace = game.place_entity(
-            Prototype.StoneFurnace, position=Position(x=x, y=0)
-        )
+        furnace = game.place_entity(Prototype.StoneFurnace, position=Position(x=x, y=0))
         furnace = game.insert_item(Prototype.Coal, furnace, quantity=150)
         game.insert_item(Prototype.IronOre, furnace, quantity=190)
 

@@ -79,7 +79,9 @@ def main():
         ns.insert_item(Prototype.Coal, furnace, 10)
         ns.sleep(4)
         furnace = ns.get_entities({Prototype.StoneFurnace})[0]
-        r.note(f"inserted 10 coal; furnace status now: {furnace.status}, warnings on entity: {furnace.warnings}")
+        r.note(
+            f"inserted 10 coal; furnace status now: {furnace.status}, warnings on entity: {furnace.warnings}"
+        )
 
         w_stale = inst.get_warnings(seconds=2)
         r.note(f"get_warnings(2) ~4s AFTER repair -> {w_stale!r}")
@@ -87,7 +89,9 @@ def main():
             "out of fuel" in w for w in w_stale
         )
 
-        reproduced = fresh_invisible and old_visible and destructive and stale_after_repair
+        reproduced = (
+            fresh_invisible and old_visible and destructive and stale_after_repair
+        )
         r.note(
             f"(a) fresh alert invisible in window: {fresh_invisible}; "
             f"(b) read consumed alert: {destructive}; "

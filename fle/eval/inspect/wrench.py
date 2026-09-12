@@ -179,7 +179,9 @@ def wrench_solver():
             episode_name = f"{task_key}_seed{seed_offset}_{uuid.uuid4().hex[:10]}"
             writer = TrajectoryWriter.for_env(episode_name)
 
-            pool = await get_simple_server_pool(max_servers=_available_container_count())
+            pool = await get_simple_server_pool(
+                max_servers=_available_container_count()
+            )
             allocation = await pool.get_server_allocation()
             run_idx = allocation.run_idx
             logger.info(
@@ -534,7 +536,9 @@ def wrench_solver():
                     logger.error(f"Error cleaning up instance: {cleanup_err}")
             if run_idx is not None:
                 try:
-                    pool = await get_simple_server_pool(max_servers=_available_container_count())
+                    pool = await get_simple_server_pool(
+                        max_servers=_available_container_count()
+                    )
                     await pool.release_run_idx(run_idx)
                 except Exception as release_err:
                     logger.error(f"Error releasing server: {release_err}")

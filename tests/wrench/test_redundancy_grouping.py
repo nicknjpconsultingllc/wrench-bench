@@ -287,7 +287,9 @@ class TestElectricNetworkGrouping:
             direction=Direction.DOWN,
             spacing=0,
         )
-        add_power_source(redundancy_instance, (pole_b.position.x, pole_b.position.y + 1))
+        add_power_source(
+            redundancy_instance, (pole_b.position.x, pole_b.position.y + 1)
+        )
 
         fired = _fire_entity_destruction(redundancy_instance)
         assert fired["kind"] == "entity_destruction"

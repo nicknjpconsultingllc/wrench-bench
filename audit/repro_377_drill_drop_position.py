@@ -63,7 +63,9 @@ def main():
         place_error = None
         try:
             furnace = ns.place_entity(Prototype.StoneFurnace, Direction.UP, py_drop)
-            r.note(f"stone-furnace at reported drop_position SUCCEEDED at {furnace.position}")
+            r.note(
+                f"stone-furnace at reported drop_position SUCCEEDED at {furnace.position}"
+            )
         except Exception as e:
             place_error = str(e)
             r.note(f"stone-furnace at reported drop_position FAILED: {place_error}")

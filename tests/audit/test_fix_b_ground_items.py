@@ -59,7 +59,9 @@ def test_normal_entities_still_serialized(instance):
     names = sorted(getattr(e, "name", "?") for e in entities)
     assert "stone-furnace" in names, names
     assert "item-on-ground" in names, names
-    furnace_entities = [e for e in entities if getattr(e, "name", "") == "stone-furnace"]
+    furnace_entities = [
+        e for e in entities if getattr(e, "name", "") == "stone-furnace"
+    ]
     assert furnace_entities[0].position == furnace.position
 
 

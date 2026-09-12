@@ -59,7 +59,9 @@ class TestObservabilityBudgetUnit:
             pass
 
         inst = FakeInstance()
-        budget = ObservabilityBudget(budget=3, metered_tools=("get_entity", "get_entities"))
+        budget = ObservabilityBudget(
+            budget=3, metered_tools=("get_entity", "get_entities")
+        )
         budget.install(inst)
         assert set(inst.pre_tool_hooks.keys()) == {"get_entity", "get_entities"}
         assert len(inst.pre_tool_hooks["get_entity"]) == 1
@@ -109,7 +111,9 @@ class TestObservabilityBudgetUnit:
             pass
 
         inst = FakeInstance()
-        budget = ObservabilityBudget(budget=1, metered_tools=("get_entity", "get_entities"))
+        budget = ObservabilityBudget(
+            budget=1, metered_tools=("get_entity", "get_entities")
+        )
         budget.install(inst)
         inst.pre_tool_hooks["get_entity"][0](None)
         inst.pre_tool_hooks["get_entities"][0](None)
@@ -159,7 +163,9 @@ class TestDisruptionTaskIntegrationUnit:
 
     class FakeInstance:
         def __init__(self):
-            self.controllers = {"inject_disruption": TestDisruptionTaskIntegrationUnit.FakeEngine()}
+            self.controllers = {
+                "inject_disruption": TestDisruptionTaskIntegrationUnit.FakeEngine()
+            }
 
     def test_unbudgeted_task_has_no_budget_and_no_status_line(self, tmp_path):
         from tests.wrench.test_disruption_task import make_task
@@ -265,7 +271,9 @@ def test_live_hook_counts_agent_calls_and_status_line_appears(instance, tmp_path
 
     response = task.verify(0.0, instance, {})
     enhanced = task.enhance_response_with_task_output("output", response)
-    assert f"Inspection calls remaining: {budget_n - baseline - 3}/{budget_n}" in enhanced
+    assert (
+        f"Inspection calls remaining: {budget_n - baseline - 3}/{budget_n}" in enhanced
+    )
     assert response.meta["inspection_calls_used"] == baseline + 3
     assert response.meta["inspection_calls_within_budget"] is True
 

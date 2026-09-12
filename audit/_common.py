@@ -10,8 +10,6 @@ Conventions:
            been fixed; the evidence lines say which).
 """
 
-import sys
-
 TCP_PORT = 27000
 
 

@@ -110,9 +110,7 @@ class ScarcityDisruptionTaskConfig(DisruptionTaskConfig):
     what TaskRegistry uses to route to the right task class.
     """
 
-    task_type: Literal["scarcity_disruption_recovery"] = (
-        "scarcity_disruption_recovery"
-    )
+    task_type: Literal["scarcity_disruption_recovery"] = "scarcity_disruption_recovery"
 
 
 iron_plate_sentinel = DisruptionTaskConfig(

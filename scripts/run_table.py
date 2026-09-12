@@ -109,9 +109,7 @@ def collect_episode_rows(logs):
             # failed episode still said "success" here. Check both.
             store = getattr(sample, "store", None) or {}
             wrench_error = (
-                store.get("WrenchData:error")
-                if hasattr(store, "get")
-                else None
+                store.get("WrenchData:error") if hasattr(store, "get") else None
             )
             episode_error = sample.error or wrench_error
             tr_value, tr_meta = _score_meta(sample, TR_SCORER)
@@ -172,9 +170,7 @@ def collect_episode_rows(logs):
                     ),
                     "detection_latencies": latencies,
                     "matched_reports": det_meta.get("matched_reports", 0),
-                    "matched_reports_strict": det_meta.get(
-                        "matched_reports_strict", 0
-                    ),
+                    "matched_reports_strict": det_meta.get("matched_reports_strict", 0),
                     "num_reports": det_meta.get("num_reports", 0),
                     "matched_fires": det_meta.get("matched_fires", 0),
                     "num_fires": det_meta.get("num_fires", 0),
@@ -220,9 +216,7 @@ def aggregate_rows(rows):
                 # this (model, task) group -- see the per-episode comment in
                 # collect_episode_rows for why this is worth surfacing
                 # alongside the winsorized headline TR.
-                "throughput_retained_raw": (
-                    tr_num / tr_den if tr_den > 0 else None
-                ),
+                "throughput_retained_raw": (tr_num / tr_den if tr_den > 0 else None),
                 "tr_numerator": tr_num,
                 "tr_denominator": tr_den,
                 # Redundancy-floor-adjusted TR, pooled across episodes the
@@ -240,9 +234,7 @@ def aggregate_rows(rows):
                 "recovery_rate": recovered / scoreable if scoreable else None,
                 "recovered": recovered,
                 "scoreable_fires": scoreable,
-                "detection_recall": (
-                    matched_fires / num_fires if num_fires else 1.0
-                ),
+                "detection_recall": (matched_fires / num_fires if num_fires else 1.0),
                 "detection_precision": (
                     matched_reports / num_reports if num_reports else 1.0
                 ),
@@ -423,8 +415,10 @@ def main():
         eval_kwargs["max_samples"] = args.max_samples
     success, logs = eval_set(**eval_kwargs)
     if not success:
-        print("WARNING: some evals did not complete successfully; "
-              "partial results follow (re-run to retry).")
+        print(
+            "WARNING: some evals did not complete successfully; "
+            "partial results follow (re-run to retry)."
+        )
 
     rows = collect_episode_rows(logs)
     aggregates = aggregate_rows(rows)

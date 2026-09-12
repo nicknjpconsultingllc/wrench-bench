@@ -65,7 +65,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--task", default="iron_plate_sentinel")
     ap.add_argument("--model", default="haiku")
-    ap.add_argument("--steps", type=int, default=None, help="override trajectory length")
+    ap.add_argument(
+        "--steps", type=int, default=None, help="override trajectory length"
+    )
     ap.add_argument("--port", type=int, default=27000)
     ap.add_argument("--outdir", default="pilot_runs")
     ap.add_argument(
@@ -125,18 +127,26 @@ def main():
     task_response = None  # last verify() result; carries observability-budget meta
 
     for step in range(steps):
-        prompt = system + f"\n\n# Observation (step {step})\n{observation}" if step == 0 else (
-            f"# Observation (step {step})\n{observation}\n\nReply with your next ```python block."
+        prompt = (
+            system + f"\n\n# Observation (step {step})\n{observation}"
+            if step == 0
+            else (
+                f"# Observation (step {step})\n{observation}\n\nReply with your next ```python block."
+            )
         )
         reply, session_id = call_claude(prompt, args.model, session_id)
         code = extract_code(reply)
         if not code:
-            observation = "Your reply contained no ```python block. Reply with exactly one."
+            observation = (
+                "Your reply contained no ```python block. Reply with exactly one."
+            )
             print(f"[step {step}] no code block returned")
             continue
         score, _, response = inst.eval(code)
         task_response = task.verify(score, inst, {})
-        observation = task.enhance_response_with_task_output(str(response), task_response)
+        observation = task.enhance_response_with_task_output(
+            str(response), task_response
+        )
         tick = game_tick(inst)
         new_samples = engine.samples(
             since_tick=all_samples[-1]["tick"] if all_samples else 0
@@ -157,7 +167,9 @@ def main():
             except Exception as exc:  # noqa: BLE001
                 print(f"[step {step}] frame render failed: {exc}")
         tp = task_response.meta.get(task.throughput_key, 0)
-        print(f"[step {step}] tick={tick - start_tick} throughput={tp} success={task_response.success}")
+        print(
+            f"[step {step}] tick={tick - start_tick} throughput={tp} success={task_response.success}"
+        )
         if task_response.success:
             print("quota met")
 
@@ -174,7 +186,12 @@ def main():
         else str(task.throughput_entity)
     )
     end_tick = game_tick(inst)
-    summary = {"task": args.task, "model": args.model, "steps": steps, "fires": len(fires)}
+    summary = {
+        "task": args.task,
+        "model": args.model,
+        "steps": steps,
+        "fires": len(fires),
+    }
     for i, f in enumerate(fires):
         horizon = end_tick - f.tick
         summary[f"fire_{i}"] = {
@@ -196,19 +213,29 @@ def main():
         # frame extents grow with the factory: scale+pad to a fixed canvas
         out_mp4 = run_dir / "timelapse.mp4"
         cmd = [
-            "ffmpeg", "-y", "-loglevel", "error",
-            "-framerate", "2",
-            "-i", str(frames_dir / "step_%03d.png"),
+            "ffmpeg",
+            "-y",
+            "-loglevel",
+            "error",
+            "-framerate",
+            "2",
+            "-i",
+            str(frames_dir / "step_%03d.png"),
             "-vf",
             "scale=1024:1024:force_original_aspect_ratio=decrease,"
             "pad=1024:1024:(ow-iw)/2:(oh-ih)/2:color=0x1f1f1f,format=yuv420p",
-            "-movflags", "+faststart",  # moov up front so browsers can stream
+            "-movflags",
+            "+faststart",  # moov up front so browsers can stream
             str(out_mp4),
         ]
         try:
             subprocess.run(cmd, check=True, capture_output=True, timeout=300)
             print(f"timelapse: {out_mp4}")
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        except (
+            subprocess.CalledProcessError,
+            FileNotFoundError,
+            subprocess.TimeoutExpired,
+        ) as exc:
             print(f"timelapse assembly skipped: {exc}")
 
     inst.cleanup()
@@ -216,7 +243,9 @@ def main():
     # Best-effort: refresh the viewer's run index (viewer/public/runs/) so a
     # freshly-finished run shows up without a manual `npm run sync-runs`.
     # Silent no-op if the viewer isn't set up (e.g. CI, a fresh checkout).
-    sync_script = Path(__file__).resolve().parent.parent / "viewer" / "scripts" / "sync-runs.mjs"
+    sync_script = (
+        Path(__file__).resolve().parent.parent / "viewer" / "scripts" / "sync-runs.mjs"
+    )
     if sync_script.exists():
         try:
             subprocess.run(["node", str(sync_script)], capture_output=True, timeout=30)

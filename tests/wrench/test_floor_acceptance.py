@@ -326,7 +326,9 @@ def build_drill_fed_furnace(game, instance):
 
     dp = drill.drop_position
     belt = game.place_entity(
-        Prototype.TransportBelt, position=Position(x=dp.x, y=dp.y), direction=Direction.RIGHT
+        Prototype.TransportBelt,
+        position=Position(x=dp.x, y=dp.y),
+        direction=Direction.RIGHT,
     )
     game.place_entity(
         Prototype.Inserter,
@@ -360,7 +362,9 @@ def arm(engine, kind, seed, params=None):
     )
 
 
-def _measure_floor_tr(floor_instance, build_fn, kind, seed, params=None, prefire_seconds=30):
+def _measure_floor_tr(
+    floor_instance, build_fn, kind, seed, params=None, prefire_seconds=30
+):
     game = floor_instance.namespace
     engine = floor_instance.controllers["inject_disruption"]
     engine.track("iron-plate")

@@ -38,7 +38,11 @@ class EventLedger:
         if not self.path.exists():
             return []
         with self.path.open() as f:
-            return [LedgerEntry.model_validate(json.loads(line)) for line in f if line.strip()]
+            return [
+                LedgerEntry.model_validate(json.loads(line))
+                for line in f
+                if line.strip()
+            ]
 
     def entries(self, event: str) -> list[LedgerEntry]:
         return [e for e in self.read() if e.event == event]

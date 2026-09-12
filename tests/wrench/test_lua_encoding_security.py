@@ -159,7 +159,7 @@ LEGIT_STRINGS = [
     pytest.param("back\\slash", id="single-backslash"),
     pytest.param("line1\nline2", id="newline"),
     pytest.param("carriage\rreturn", id="carriage-return"),
-    pytest.param("unicode: héllo wörld 日本語 \U0001F680", id="unicode"),
+    pytest.param("unicode: héllo wörld 日本語 \U0001f680", id="unicode"),
     pytest.param("", id="empty-string"),
     pytest.param('quote " inside', id="double-quote"),
     pytest.param("furnace destroyed", id="report-fault-style-cause"),
@@ -195,7 +195,7 @@ def test_legitimate_strings_round_trip_via_slpp_decode():
     for value in (
         "hello world",
         "it's a test",
-        "quote \" inside",
+        'quote " inside',
         "",
     ):
         encoded = lua.encode(_lua_encode_safe(value))
@@ -217,7 +217,7 @@ def test_nested_dict_string_leaves_are_escaped(lua_runtime):
     )
     payload = {
         "kind": 'evil" -- INJECTED() --',
-        "items": ["a\\\"b", "normal", 3, True, None],
+        "items": ['a\\"b', "normal", 3, True, None],
         "nested": {"x": 'y\\" -- inner injection --'},
     }
     encoded = lua.encode(_lua_encode_safe(payload))
@@ -269,8 +269,7 @@ def test_real_invocation_shape_injection_is_neutralized(lua_runtime):
     lua_runtime.execute(code)
     canary = lua_runtime.eval("storage.wrench.INJECTED_PWNED")
     assert canary is None, (
-        "real-shape injection succeeded even with the fix applied -- "
-        f"canary={canary!r}"
+        f"real-shape injection succeeded even with the fix applied -- canary={canary!r}"
     )
 
 
