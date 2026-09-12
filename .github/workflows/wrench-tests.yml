@@ -20,9 +20,7 @@ jobs:
           cache-dependency-glob: "**/pyproject.toml"
 
       - name: Install
-        run: |
-          uv venv
-          uv pip install -e . pytest
+        run: uv pip install -e . pytest
 
       - name: Unit tests (no Factorio server; live tests are marked wrench_live)
         run: |
