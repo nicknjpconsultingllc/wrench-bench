@@ -1,0 +1,14 @@
+{"tick":48991351,"event":"armed","kind":"entity_destruction","seed":29,"affected":[],"detail":{"id":1}}
+{"tick":48991351,"event":"fired","kind":"entity_destruction","seed":29,"affected":[{"name":"burner-mining-drill","x":19,"y":71,"same_type_total":3}],"detail":{"id":1}}
+{"tick":49021609,"event":"report_fault","affected":[],"detail":{"x":17.5,"y":72,"cause":"Factory shutdown again due to fuel shortage. Refueled all components."}}
+{"tick":49022347,"event":"armed","kind":"resource_exhaustion","seed":31,"affected":[],"detail":{"id":2}}
+{"tick":49022347,"event":"fired","kind":"resource_exhaustion","seed":31,"affected":[{"name":"burner-mining-drill","x":16,"y":71,"tiles_changed":4,"resource":"iron-ore"}],"detail":{"id":2}}
+{"tick":49035711,"event":"report_fault","affected":[],"detail":{"x":16,"y":71,"cause":"The primary iron mining drill has vanished, halting one production line."}}
+{"tick":49043577,"event":"report_fault","affected":[],"detail":{"x":16,"y":71,"cause":"Phantom entity at drill position. Attempted to clear and rebuild."}}
+{"tick":49051790,"event":"report_fault","affected":[],"detail":{"x":16,"y":73,"cause":"First production line was unrecoverable. It has been deconstructed."}}
+{"tick":49067703,"event":"report_fault","affected":[],"detail":{"x":19.5,"y":75.7,"cause":"Persistent item-on-ground bug is blocking all construction. Unable to clear."}}
+{"tick":49082512,"event":"report_fault","affected":[],"detail":{"x":19,"y":73,"cause":"All attempts to extract items from the furnace have failed due to placement errors."}}
+{"tick":49097416,"event":"report_fault","affected":[],"detail":{"x":38.5,"y":70.5,"cause":"Failed to build a basic production line after a full factory reset."}}
+{"tick":49112009,"event":"report_fault","affected":[],"detail":{"x":42,"y":71,"cause":"Failed to build a second parallel production line."}}
+{"tick":49190338,"event":"report_fault","affected":[],"detail":{"x":39,"y":78,"cause":"Furnace alignment bug, still not receiving ingredients after rebuild."}}
+{"tick":49211905,"event":"report_fault","affected":[],"detail":{"x":36,"y":73,"cause":"Manual furnace alignment failed, second line is not working."}}

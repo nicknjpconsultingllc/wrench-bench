@@ -1,0 +1,7 @@
+{"tick":49405943,"event":"armed","kind":"entity_destruction","seed":30,"affected":[],"detail":{"id":1}}
+{"tick":49405943,"event":"fired","kind":"entity_destruction","seed":30,"affected":[{"name":"stone-furnace","x":23,"y":73,"same_type_total":2}],"detail":{"id":1}}
+{"tick":49435217,"event":"armed","kind":"resource_exhaustion","seed":32,"affected":[],"detail":{"id":2}}
+{"tick":49435217,"event":"fired","kind":"resource_exhaustion","seed":32,"affected":[{"name":"burner-mining-drill","x":23,"y":71,"tiles_changed":4,"resource":"iron-ore"}],"detail":{"id":2}}
+{"tick":49447161,"event":"report_fault","affected":[],"detail":{"x":23,"y":71,"cause":"burner-mining-drill has no minable resources - status no_minable_resources, likely disrupted/resource tile removed"}}
+{"tick":49671556,"event":"report_fault","affected":[],"detail":{"x":23.5,"y":72.3,"cause":"persistent phantom iron-ore item-on-ground that respawns after pickup; blocking drill1 output warnings but not actually stopping production"}}
+{"tick":49671557,"event":"report_fault","affected":[],"detail":{"x":31.7,"y":71.5,"cause":"persistent phantom iron-plate item-on-ground near furnace3 old inserter spot"}}

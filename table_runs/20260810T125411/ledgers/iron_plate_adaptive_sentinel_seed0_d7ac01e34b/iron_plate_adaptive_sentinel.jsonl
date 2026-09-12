@@ -1,0 +1,2 @@
+{"tick":42808841,"event":"report_fault","affected":[],"detail":{"x":9.5,"y":62.7,"cause":"persistent iron-plate ground item blocks burner-inserter output; factory logic cannot clear it reliably"}}
+{"tick":42817083,"event":"report_fault","affected":[],"detail":{"x":40.5,"y":5.7,"cause":"iron-plate item-on-ground blocking central->satellite inserter output at (40.5,4.5)"}}

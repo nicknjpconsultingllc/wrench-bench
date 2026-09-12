@@ -1,0 +1,5 @@
+{"tick":42434631,"event":"armed","kind":"entity_destruction","seed":12,"affected":[],"detail":{"id":1}}
+{"tick":42434631,"event":"fired","kind":"entity_destruction","seed":12,"affected":[{"name":"stone-furnace","x":27,"y":76,"same_type_total":1}],"detail":{"id":1}}
+{"tick":42457181,"event":"armed","kind":"belt_cut","seed":24,"affected":[],"detail":{"id":2}}
+{"tick":42457181,"event":"not_applicable","kind":"belt_cut","affected":[],"detail":{"id":2,"error":"no belts"}}
+{"tick":42520746,"event":"report_fault","affected":[],"detail":{"x":27,"y":76,"cause":"stone furnace out of fuel; drill blocked by full furnace source"}}

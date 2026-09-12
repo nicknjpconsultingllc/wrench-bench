@@ -1,0 +1,4 @@
+{"tick":43237862,"event":"armed","kind":"entity_destruction","seed":38,"affected":[],"detail":{"id":1}}
+{"tick":43237862,"event":"fired","kind":"entity_destruction","seed":38,"affected":[{"name":"stone-furnace","x":28,"y":76,"same_type_total":1}],"detail":{"id":1}}
+{"tick":43245406,"event":"armed","kind":"adaptive_strike","seed":30,"affected":[],"detail":{"id":2}}
+{"tick":43245406,"event":"not_applicable","kind":"adaptive_strike","affected":[],"detail":{"id":2,"error":"no electric poles"}}

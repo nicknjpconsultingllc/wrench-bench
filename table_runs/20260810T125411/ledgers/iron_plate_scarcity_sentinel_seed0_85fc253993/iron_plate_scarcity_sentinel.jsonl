@@ -1,0 +1,2 @@
+{"tick":42936143,"event":"armed","kind":"entity_destruction","seed":29,"affected":[],"detail":{"id":1}}
+{"tick":42936143,"event":"fired","kind":"entity_destruction","seed":29,"affected":[{"name":"burner-mining-drill","x":37,"y":71,"same_type_total":2}],"detail":{"id":1}}

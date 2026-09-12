@@ -1,0 +1,6 @@
+{"tick":85890572,"event":"armed","kind":"entity_destruction","seed":37,"affected":[],"detail":{"id":1}}
+{"tick":85890572,"event":"fired","kind":"entity_destruction","seed":37,"affected":[{"name":"electric-mining-drill","x":19.5,"y":70.5,"same_type_total":1}],"detail":{"id":1}}
+{"tick":85894221,"event":"armed","kind":"adaptive_strike","seed":29,"affected":[],"detail":{"id":2}}
+{"tick":85894221,"event":"not_applicable","kind":"adaptive_strike","affected":[],"detail":{"id":2,"error":"no powered consumers"}}
+{"tick":85928090,"event":"report_fault","affected":[],"detail":{"x":23.5,"y":78.5,"cause":"Drill is waiting for space in the furnace, causing intermittent stalls. This is an accepted inefficiency."}}
+{"tick":85958530,"event":"report_fault","affected":[],"detail":{"x":23.5,"y":78.5,"cause":"Drill is temporarily blocked because its output furnace is full of ore."}}

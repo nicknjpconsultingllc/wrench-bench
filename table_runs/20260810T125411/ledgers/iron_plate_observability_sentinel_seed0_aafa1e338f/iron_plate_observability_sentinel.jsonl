@@ -1,0 +1,4 @@
+{"tick":47761843,"event":"armed","kind":"entity_destruction","seed":11,"affected":[],"detail":{"id":1}}
+{"tick":47761843,"event":"fired","kind":"entity_destruction","seed":11,"affected":[{"name":"burner-mining-drill","x":20,"y":73,"same_type_total":2}],"detail":{"id":1}}
+{"tick":47765492,"event":"armed","kind":"belt_cut","seed":23,"affected":[],"detail":{"id":2}}
+{"tick":47765492,"event":"not_applicable","kind":"belt_cut","affected":[],"detail":{"id":2,"error":"no belts"}}

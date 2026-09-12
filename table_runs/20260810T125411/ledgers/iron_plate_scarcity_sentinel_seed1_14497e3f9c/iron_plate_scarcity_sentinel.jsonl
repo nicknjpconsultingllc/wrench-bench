@@ -1,0 +1,6 @@
+{"tick":86639806,"event":"armed","kind":"entity_destruction","seed":30,"affected":[],"detail":{"id":1}}
+{"tick":86639806,"event":"fired","kind":"entity_destruction","seed":30,"affected":[{"name":"burner-mining-drill","x":20,"y":71,"same_type_total":2}],"detail":{"id":1}}
+{"tick":86643455,"event":"armed","kind":"resource_exhaustion","seed":32,"affected":[],"detail":{"id":2}}
+{"tick":86643455,"event":"fired","kind":"resource_exhaustion","seed":32,"affected":[{"name":"burner-mining-drill","x":23,"y":21,"tiles_changed":0,"resource":"iron-ore"}],"detail":{"id":2}}
+{"tick":86643488,"event":"report_fault","affected":[],"detail":{"x":23,"y":21,"cause":"Self-fueling inserter is misaligned and cannot pick up from chest."}}
+{"tick":86738414,"event":"report_fault","affected":[],"detail":{"x":0,"y":0,"cause":"Complete and total agent failure. Unable to create a stable fuel supply. The factory is dead."}}

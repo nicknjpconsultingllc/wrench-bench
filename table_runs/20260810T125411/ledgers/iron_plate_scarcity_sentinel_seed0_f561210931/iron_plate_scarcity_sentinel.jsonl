@@ -1,0 +1,4 @@
+{"tick":43554341,"event":"armed","kind":"entity_destruction","seed":29,"affected":[],"detail":{"id":1}}
+{"tick":43554341,"event":"fired","kind":"entity_destruction","seed":29,"affected":[{"name":"burner-mining-drill","x":34,"y":76,"same_type_total":2}],"detail":{"id":1}}
+{"tick":43647862,"event":"armed","kind":"resource_exhaustion","seed":31,"affected":[],"detail":{"id":2}}
+{"tick":43647862,"event":"fired","kind":"resource_exhaustion","seed":31,"affected":[{"name":"burner-mining-drill","x":23,"y":86,"tiles_changed":4,"resource":"iron-ore"}],"detail":{"id":2}}
