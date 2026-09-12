@@ -26,9 +26,9 @@ fixes.
 | Four-lens review | correctness, clarity, security, efficiency | 3 | `bb24259e`, `82914ebb`, `fd298058` |
 | Post-grid | pool timeout | 1 | `224cc9e7` |
 
-Sixteen findings, sixteen fixed. Three were reward-hacking paths, one was
-remote code execution, six would have produced a results table that looked
-clean while being mostly wrong.
+Sixteen findings, sixteen fixed. Three were reward-hacking paths, one was a
+Lua encoding bug first misfiled as remote code execution (§2), six would have
+produced a results table that looked clean while being mostly wrong.
 
 ## 1. Reward-hacking paths closed
 
@@ -83,38 +83,45 @@ neutral outcome to the −0.5 winsorize floor. Reproduced: the same episode
 scored 0.011 with the correct count and −0.5 with the inflated one. Fixed with
 the electric-network / bounded-radius grouping described above (`82914ebb`).
 
-## 2. Remote code execution through a tool argument
+## 2. Malformed Lua string encoding in the shared tool layer (and what it isn't)
 
 Every RCON tool call goes through `slpp.encode()` to build the Lua for
-`/silent-command`. `slpp` escapes double quotes but never backslashes, so a
-string ending in an odd number of backslashes before a quote closes its Lua
-string literal early and everything after it runs as Lua in the privileged
-server context. `report_fault`'s `cause` argument is free text the model
-controls. Nested payloads (`InjectDisruption` passes dicts through the same
-path) reach the same branch at every leaf.
-
-Verified live before the fix: a crafted `cause` string set
-`storage.wrench.INJECTED_PWNED = true` on the disruption engine's own state,
-the table every scoring function treats as ground truth. Verified after: the
-same payload leaves the canary unset and a normal `report_fault` stores its
-text verbatim.
+`/silent-command`. `slpp` escapes double quotes but not backslashes or
+newlines, so any string argument containing `\`, `\n` or `\r` produces
+invalid Lua (`C:\path` → "invalid escape sequence", multi-line text →
+"unfinished string"), and a string ending in an odd number of backslashes
+before a quote closes its literal early so the rest runs as Lua. Reproduced
+live: a crafted `cause` string passed to `report_fault` set
+`storage.wrench.INJECTED_PWNED = true`.
 
 Fix (`fle/env/tools/controller.py:_lua_encode_safe`): pre-escape backslashes,
-`\n`, `\r` at every string leaf before `slpp` sees it; `slpp`'s quote escaping
-composes correctly on top. 26 regression cases in
+`\n`, `\r` at every string leaf before `slpp` sees it; `slpp`'s quote
+escaping composes correctly on top. 26 regression cases in
 `tests/wrench/test_lua_encoding_security.py`, run through a real Lua
-interpreter (`lupa`) in the exact `pcall(storage.actions.NAME, ...)` shape the
-controller emits.
+interpreter (`lupa`) in the exact `pcall(storage.actions.NAME, ...)` shape
+the controller emits.
 
-This bug is in FLE's shared `Controller` path, so it affects any agent harness
-built on FLE. It is a different failure from the one Prime Intellect
-[reported](https://www.primeintellect.ai/blog/prime-agent) on August 5, 2026,
-where their agent "could bypass Factorio's rules entirely by spawning in
-resources directly into its assembly machines through RCON commands." That
-agent held RCON legitimately and misused it. Here the agent holds only the tool
-API and a string argument reaches the same place. Still unfixed and lower risk:
-`slpp.decode()` has its own escaping bugs on the response path, and dict *keys*
-get no escaping; no attacker-controlled key exists today.
+**This was first written up as remote code execution. A red-team pass on
+2026-09-12 showed that framing was wrong.** FLE executes the agent's Python
+in-process with the `FactorioInstance` in scope (`fle/env/namespace.py`
+assigns `self.instance`, and the namespace is the program's globals), so an
+agent program can already run
+`instance.rcon_client.send_command("/silent-command ...")` directly. Verified
+live: a one-line program returned `game.tick` through that path. The string
+breakout adds no capability the agent doesn't already hold, in this fork or
+upstream. It is a correctness bug (silent tool failures on backslashes and
+newlines) and defense in depth for any future frontend that exposes tool
+arguments without exposing Python. Filed upstream as such.
+
+The finding that survives is the bigger one: **WRENCH's ground truth is
+tamper-resistant against post-fire game actions, not against a Python
+program that reaches for RCON.** Nothing in the harness stops an agent from
+editing `storage.wrench` or spawning items, and Prime Intellect's Aug 5 2026
+Prime Agent post reports an agent doing exactly that in FLE. The 18-episode
+grid was hand-checked and no model did this, but the guarantee is empirical.
+A sandboxed executor (agent code runs in a container with an allowlisted
+RPC and no RCON reachability) is the fix, and it's a blocker before any RL
+training run, where a policy will find this path. Tracked in §6.
 
 ## 3. Silent failures in the harness
 
@@ -193,3 +200,6 @@ unproven on real data.
   GPT-5.1/scarcity −0.5) are unreplicated.
 - The unit suite ran only by hand until `.github/workflows/wrench-tests.yml`
   landed; the inherited FLE workflows never ran against this fork.
+- **Agent programs can reach RCON** (§2). No sandbox exists between the
+  agent's Python and `instance.rcon_client`; benchmark integrity against a
+  deliberately adversarial policy is unenforced. Required before RL use.

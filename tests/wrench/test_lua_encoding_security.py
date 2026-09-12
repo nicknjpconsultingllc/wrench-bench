@@ -3,7 +3,7 @@
 Background: every ``Tool`` subclass with string arguments (e.g.
 ``ReportFault``'s agent-controlled ``cause`` parameter) routes through
 ``Controller._execute_once``/``execute2``/``_get_command`` (fle/env/tools/
-controller.py), which builds a privileged ``/silent-command`` RCON payload
+controller.py), which builds a ``/silent-command`` RCON payload
 using ``slpp.slpp.encode`` (the third-party ``slpp`` pip package) to quote
 string arguments as Lua string literals.
 
@@ -18,7 +18,7 @@ literal closes early -- everything after that point falls outside the
 string, and a trailing ``--`` turns it into a Lua comment. A payload that
 keeps the surrounding ``pcall(...)``/``dump(...)`` call structure
 syntactically balanced can splice arbitrary Lua statements into the
-privileged RCON context, including tampering with ``storage.wrench`` (the
+RCON command, including tampering with ``storage.wrench`` (the
 disruption engine's own ground-truth state).
 
 The fix (``fle.env.tools.controller._lua_encode_safe`` /
@@ -29,6 +29,11 @@ since slpp itself recurses into nested values and reuses the same
 string-encoding branch for every leaf (confirmed reachable in practice via
 ``InjectDisruption.__call__``, which passes a raw ``dict`` payload straight
 through ``Tool.execute``).
+
+Scope note (2026-09-12 red team): this is a correctness bug plus defense in
+depth, not a privilege escalation. FLE runs agent Python in-process with the
+``FactorioInstance`` in scope, so an agent program can already call
+``instance.rcon_client.send_command`` directly; see docs/hardening.md §2.
 
 These tests use a real Lua interpreter (``lupa``, an existing project
 dependency -- see fle/env/lua_manager.py) to parse the encoded output,

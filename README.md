@@ -172,7 +172,10 @@ cluster-bootstrap CIs ([benchmark design](docs/benchmark_design.md)).
 
 Before that run, the scoring and harness went through seven rounds of
 adversarial review: 16 findings fixed, among them three reward-hacking paths
-and a Lua-injection RCE in FLE's shared tool layer. The full log is
+and a Lua string-encoding bug in FLE's shared tool layer. One limit the
+review also surfaced: agent programs run in-process with the game instance
+in scope, so ground truth is tamper-resistant against game actions, not
+against a program that reaches for RCON directly (details in the log). The full log is
 [docs/hardening.md](docs/hardening.md); agent failure modes are in
 [docs/failure_taxonomy.md](docs/failure_taxonomy.md). Numbers published here
 ship with their ledgers and trajectories for independent re-scoring.

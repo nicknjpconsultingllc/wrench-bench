@@ -30,7 +30,7 @@ def _lua_escape_string(s: str) -> str:
     string ending in an odd number of backslashes immediately before a
     quote (e.g. ``a\\" -- payload``) therefore produces Lua text whose
     string literal closes early, letting a trailing ``--`` comment splice
-    arbitrary Lua into the privileged ``/silent-command`` RCON payload
+    arbitrary Lua into the ``/silent-command`` RCON payload
     built by ``Controller._execute_once``/``execute2``/``_get_command``.
 
     Escaping backslashes *before* slpp escapes quotes composes correctly
