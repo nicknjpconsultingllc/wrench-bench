@@ -4,7 +4,8 @@ The wrench solver drains engine production samples and ledger events into
 the WrenchData store incrementally during the episode (the engine's ring
 buffer only holds ~82k ticks, so an end-of-episode snapshot would lose the
 frozen pre-disruption baseline). These scorers are pure readers of that
-store: they re-run the post-hoc functions from fle.disruptions.scoring at
+store: they re-run ``fle.disruptions.episode.episode_metrics`` (the same
+function ``WrenchEpisode.finalize`` and the verifiers package use) at
 scoring time.
 
 Denominator policy (mirrors fle.disruptions.scoring): when a metric is not
@@ -17,22 +18,14 @@ scripts/run_table.py does exactly that.
 
 import logging
 import math
-from typing import List, Optional
+from typing import List
 
 from inspect_ai.agent import AgentState
 from inspect_ai.scorer import Score, Scorer, Target, mean, scorer
 from inspect_ai.util import StoreModel, store_as
 from pydantic import Field
 
-from fle.disruptions.scoring import (
-    detection_counts,
-    detection_metrics,
-    floor_adjusted_throughput_retained_parts,
-    frozen_baseline,
-    recovery_at,
-    throughput_retained_parts,
-    winsorize_tr,
-)
+from fle.disruptions.episode import episode_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -62,31 +55,16 @@ class WrenchData(StoreModel):
     error: str = Field(default="")
     # Dense per-step potential-based reward-shaping signal (see
     # fle.disruptions.scoring.recovery_potential / shaped_reward_delta),
-    # accumulated incrementally by wrench_solver()'s drain() closure. Purely
-    # additive: no existing scorer reads this field, and it is never
-    # surfaced to the agent. Each entry is {tick, fire_tick, phi, delta}.
+    # accumulated incrementally by WrenchEpisode.drain(). Purely additive:
+    # no existing scorer reads this field, and it is never surfaced to the
+    # agent. Each entry is {tick, fire_tick, phi, delta}.
     shaped_rewards: List[dict] = Field(default_factory=list)
 
 
-def _fires(data: WrenchData) -> List[dict]:
-    return [e for e in data.ledger_events if e.get("event") == "fired"]
-
-
-def _item(data: WrenchData) -> str:
-    """Tracked item name; the engine's sample counts key is authoritative."""
-    for sample in reversed(data.samples):
-        counts = sample.get("counts") or {}
-        if counts:
-            return next(iter(counts))
-    return data.quota_item
-
-
-def _fire_summary(fire: dict) -> dict:
-    return {
-        "kind": fire.get("kind"),
-        "tick": fire.get("tick"),
-        "seed": fire.get("seed"),
-    }
+def _metrics(data: WrenchData) -> dict:
+    return episode_metrics(
+        data.samples, data.ledger_events, data.quota_item, data.end_tick
+    )
 
 
 @scorer(metrics=[mean()])
@@ -111,78 +89,18 @@ def throughput_retained_scorer() -> Scorer:
     """
 
     async def score(state: AgentState, target: Target) -> Score:
-        data = store_as(WrenchData)
-        fires = _fires(data)
-        item = _item(data)
-        per_fire = []
-        num = 0.0
-        den = 0.0
-        floor_num = 0.0
-        floor_den = 0.0
-        floor_adjusted_num_fires = 0
-        for fire in fires:
-            fire_tick = int(fire.get("tick", 0))
-            horizon = max(0, data.end_tick - fire_tick)
-            parts = throughput_retained_parts(data.samples, item, fire_tick, horizon)
-            entry = _fire_summary(fire)
-            entry["horizon_ticks"] = horizon
-            entry["baseline_per_min"] = frozen_baseline(data.samples, item, fire_tick)
-            if parts is not None:
-                actual, expected = parts
-                entry["actual"] = actual
-                entry["expected"] = expected
-                entry["tr"] = winsorize_tr(actual / expected)
-                num += actual
-                den += expected
-            else:
-                entry["actual"] = None
-                entry["expected"] = None
-                entry["tr"] = None
-
-            floor_parts = floor_adjusted_throughput_retained_parts(
-                data.samples, item, fire_tick, horizon, fire
-            )
-            if floor_parts is not None:
-                floor_actual, floor_expected = floor_parts
-                entry["floor_actual"] = floor_actual
-                entry["floor_expected"] = floor_expected
-                entry["floor_tr"] = winsorize_tr(floor_actual / floor_expected)
-                floor_num += floor_actual
-                floor_den += floor_expected
-                floor_adjusted_num_fires += 1
-            else:
-                entry["floor_actual"] = None
-                entry["floor_expected"] = None
-                entry["floor_tr"] = None
-            per_fire.append(entry)
-
-        scoreable = den > 0
-        pooled: Optional[float] = winsorize_tr(num / den) if scoreable else None
-        floor_scoreable = floor_den > 0
-        floor_pooled: Optional[float] = (
-            winsorize_tr(floor_num / floor_den) if floor_scoreable else None
-        )
+        block = _metrics(store_as(WrenchData))["throughput_retained"]
+        pooled = block["value"]
+        num_fires = block["metadata"]["num_fires"]
         return Score(
             value=pooled if pooled is not None else float("nan"),
             answer=f"{pooled:.3f}" if pooled is not None else "unscoreable",
             explanation=(
-                f"TR pooled over {len(fires)} fire(s): {pooled:.3f}"
+                f"TR pooled over {num_fires} fire(s): {pooled:.3f}"
                 if pooled is not None
-                else f"Not scoreable: {len(fires)} fire(s), no valid baseline"
+                else f"Not scoreable: {num_fires} fire(s), no valid baseline"
             ),
-            metadata={
-                "scoreable": scoreable,
-                "item": item,
-                "num_fires": len(fires),
-                "pooled_numerator": num,
-                "pooled_denominator": den,
-                "floor_adjusted_scoreable": floor_scoreable,
-                "floor_adjusted_num_fires": floor_adjusted_num_fires,
-                "floor_adjusted_pooled": floor_pooled,
-                "floor_adjusted_pooled_numerator": floor_num,
-                "floor_adjusted_pooled_denominator": floor_den,
-                "fires": per_fire,
-            },
+            metadata=block["metadata"],
         )
 
     return score
@@ -199,43 +117,24 @@ def recovery_scorer() -> Scorer:
     """
 
     async def score(state: AgentState, target: Target) -> Score:
-        data = store_as(WrenchData)
-        fires = _fires(data)
-        item = _item(data)
-        per_fire = []
-        recovered = 0
-        scoreable_fires = 0
-        for fire in fires:
-            fire_tick = int(fire.get("tick", 0))
-            budget = max(0, data.end_tick - fire_tick)
-            result = recovery_at(data.samples, item, fire_tick, budget)
-            entry = _fire_summary(fire)
-            entry["budget_ticks"] = budget
-            entry["recovered"] = result
-            per_fire.append(entry)
-            if result is not None:
-                scoreable_fires += 1
-                if result:
-                    recovered += 1
-
-        scoreable = scoreable_fires > 0
-        rate = recovered / scoreable_fires if scoreable else None
+        block = _metrics(store_as(WrenchData))["recovery"]
+        rate = block["value"]
+        meta = block["metadata"]
+        scoreable = meta["scoreable"]
         return Score(
             value=rate if rate is not None else float("nan"),
-            answer=f"{recovered}/{scoreable_fires}" if scoreable else "unscoreable",
-            explanation=(
-                f"Recovered {recovered} of {scoreable_fires} scoreable fire(s)"
+            answer=(
+                f"{meta['recovered']}/{meta['scoreable_fires']}"
                 if scoreable
-                else f"Not scoreable: {len(fires)} fire(s), no valid baseline"
+                else "unscoreable"
             ),
-            metadata={
-                "scoreable": scoreable,
-                "item": item,
-                "num_fires": len(fires),
-                "recovered": recovered,
-                "scoreable_fires": scoreable_fires,
-                "fires": per_fire,
-            },
+            explanation=(
+                f"Recovered {meta['recovered']} of {meta['scoreable_fires']} "
+                f"scoreable fire(s)"
+                if scoreable
+                else f"Not scoreable: {meta['num_fires']} fire(s), no valid baseline"
+            ),
+            metadata=meta,
         )
 
     return score
@@ -251,38 +150,18 @@ def detection_scorer() -> Scorer:
     """
 
     async def score(state: AgentState, target: Target) -> Score:
-        data = store_as(WrenchData)
-        fires = _fires(data)
-        metrics = detection_metrics(data.ledger_events, fires)
-        counts = detection_counts(data.ledger_events, fires)
-        latencies = metrics["latencies"]
-        mean_latency = sum(latencies) / len(latencies) if latencies else None
+        block = _metrics(store_as(WrenchData))["detection"]
+        meta = block["metadata"]
         return Score(
-            value=metrics["recall"],
-            answer=f"recall={metrics['recall']:.2f}",
+            value=meta["recall"],
+            answer=f"recall={meta['recall']:.2f}",
             explanation=(
-                f"Detection over {counts['num_fires']} fire(s), "
-                f"{counts['num_reports']} report(s): recall={metrics['recall']:.2f}, "
-                f"precision_strict={metrics['precision_strict']:.2f} "
-                f"(loose {metrics['precision']:.2f})"
+                f"Detection over {meta['num_fires']} fire(s), "
+                f"{meta['num_reports']} report(s): recall={meta['recall']:.2f}, "
+                f"precision_strict={meta['precision_strict']:.2f} "
+                f"(loose {meta['precision']:.2f})"
             ),
-            metadata={
-                "precision": metrics["precision"],
-                "precision_strict": metrics["precision_strict"],
-                "recall": metrics["recall"],
-                "latencies": latencies,
-                "mean_latency_ticks": mean_latency,
-                **{
-                    k: counts[k]
-                    for k in (
-                        "matched_reports",
-                        "matched_reports_strict",
-                        "num_reports",
-                        "matched_fires",
-                        "num_fires",
-                    )
-                },
-            },
+            metadata=meta,
         )
 
     return score
