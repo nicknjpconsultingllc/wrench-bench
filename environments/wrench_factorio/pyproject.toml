@@ -5,10 +5,12 @@ tags = ["game", "multi-turn", "agent", "code", "factorio", "disruption-recovery"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
-    # Built and tested against the classic (v0) MultiTurnEnv API of 0.2.0.
+    # Built and tested against the classic (v0) MultiTurnEnv API of 0.2.x;
+    # get_prompt_messages/render_completion override internals, so cap the
+    # minor version.
     # prime classifies a >=0.2.0 floor as the v1 taskset API, so push with
     # `prime env push --runtime v0` (see README).
-    "verifiers>=0.2.0",
+    "verifiers>=0.2.0,<0.3",
     "datasets>=2.0",
     # The WRENCH fork of the Factorio Learning Environment (episode driver,
     # disruption engine, scoring). Not on PyPI; installed from the repository.
