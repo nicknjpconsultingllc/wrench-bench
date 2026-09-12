@@ -1,0 +1,33 @@
+[project]
+name = "wrench-factorio"
+description = "WRENCH: disruption-recovery benchmark for LLM agents in Factorio -- build a factory, survive seeded faults, scored on throughput retained, recovery and fault detection"
+tags = ["game", "multi-turn", "agent", "code", "factorio", "disruption-recovery", "eval", "train"]
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    # Built and tested against the classic (v0) MultiTurnEnv API of 0.2.0.
+    # prime classifies a >=0.2.0 floor as the v1 taskset API, so push with
+    # `prime env push --runtime v0` (see README).
+    "verifiers>=0.2.0",
+    "datasets>=2.0",
+    # The WRENCH fork of the Factorio Learning Environment (episode driver,
+    # disruption engine, scoring). Not on PyPI; installed from the repository.
+    "factorio-learning-environment @ git+https://github.com/nicknjpconsultingllc/wrench-bench.git",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+# The FLE fork is a direct git reference (not on PyPI).
+allow-direct-references = true
+
+[tool.hatch.build]
+include = ["wrench_factorio.py", "README.md", "pyproject.toml"]
+
+[tool.verifiers.eval]
+# One rollout per (task, seed) row; the six default rows are the six
+# sentinel tasks at seed offset 0.
+num_examples = 6
+rollouts_per_example = 1

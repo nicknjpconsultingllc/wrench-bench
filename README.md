@@ -126,6 +126,18 @@ Tasks: `iron_plate_sentinel`, `iron_gear_sentinel`, `copper_cable_sentinel`.
 Published comparisons run through [Inspect AI](https://inspect.aisi.org.uk/)
 with API-key providers so every model row shares one harness.
 
+WRENCH is also packaged as a Prime Intellect
+[verifiers](https://github.com/PrimeIntellect-ai/verifiers) environment for
+`vf-eval` and RL training, driven by the same episode code
+(`fle/disruptions/episode.py`) as the Inspect solver:
+
+```bash
+uv pip install -e environments/wrench_factorio --no-deps
+vf-eval wrench-factorio -m <model> -n 1 -r 1 -c 1 -a '{"tasks": "iron_plate_sentinel"}'
+```
+
+See [environments/wrench_factorio/README.md](environments/wrench_factorio/README.md).
+
 ## Status
 
 Working vertical slice (engine, tasks, scorers, fixtures, trajectory capture,
