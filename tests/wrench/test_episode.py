@@ -17,7 +17,7 @@ from fle.disruptions.episode import (
     parse_code,
     system_prompt_for,
 )
-from fle.disruptions.scoring import (
+from wrench_core.scoring import (
     detection_metrics,
     recovery_at,
     throughput_retained,

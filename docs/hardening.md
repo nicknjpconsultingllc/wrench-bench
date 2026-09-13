@@ -41,7 +41,7 @@ precision 1.0, recall 1.0. Worse, `detection_scorer` reported recall as the
 Inspect score value; precision only ever reached metadata, so it constrained
 nothing.
 
-Fix (`fle/disruptions/scoring.py:detection_counts`): credit caps at one match
+Fix (`wrench_core/scoring.py:detection_counts`): credit caps at one match
 per fire while the report count stays uncapped, so volume suppresses precision
 directly (spam precision 1.0 → 0.1); recall gates to 0 when loose-radius
 precision drops below `DETECTION_PRECISION_FLOOR = 0.5`. The floor sits on the
@@ -59,11 +59,11 @@ The obvious fix, observing the post-fire plateau to estimate F, has an
 exploit: damage your own surviving furnace after the fire to push the observed
 floor down, then "recover" from your own damage for credit. A reference
 implementation of that design lives in
-`tests/wrench/test_scoring.py::TestFloorAdjustedClosesSelfSabotageExploit` and
+`tests/test_scoring.py::TestFloorAdjustedClosesSelfSabotageExploit` (wrench_core) and
 hands ~0.49 of free credit to the sabotage trajectory.
 
 Shipped instead (`server.lua:KINDS.entity_destruction`,
-`scoring.py:floor_adjusted_throughput_retained_parts`): the redundancy count
+`wrench_core/scoring.py:floor_adjusted_throughput_retained_parts`): the redundancy count
 is taken *before* the victim dies, from the same electric network (or a
 100-tile radius for burner-tier builds), and stashed in the ledger. Nothing the
 agent does after the fire can move it. The floor is `expected × (n−1)/n`; with

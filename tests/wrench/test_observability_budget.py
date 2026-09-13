@@ -11,7 +11,7 @@ raised by callbacks, so a hard cap is not cleanly implementable through it).
 import pytest
 
 from fle.disruptions import DisruptionKind, DisruptionSpec
-from fle.disruptions.scoring import observability_budget_metrics
+from wrench_core.scoring import observability_budget_metrics
 from fle.env.entities import Position
 from fle.env.game_types import Prototype
 from fle.eval.tasks import DisruptionRecoveryTask

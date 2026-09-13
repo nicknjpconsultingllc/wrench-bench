@@ -15,14 +15,14 @@ import subprocess
 import time
 from pathlib import Path
 
-from fle.disruptions.scoring import (
+from wrench_core.scoring import (
     detection_metrics,
     frozen_baseline,
     observability_budget_metrics,
     recovery_at,
     throughput_retained,
 )
-from fle.disruptions.trajectory import TrajectoryWriter
+from wrench_core.trajectory import TrajectoryWriter
 from fle.env.instance import FactorioInstance
 from fle.eval.tasks.task_definitions.task_registry import create_task
 
@@ -202,7 +202,7 @@ def main():
             "recovered": recovery_at(samples, item, f.tick, horizon),
         }
     summary["detection"] = detection_metrics(ledger, fires)
-    # None on unbudgeted tasks (most sentinels) -- see fle/disruptions/scoring.py
+    # None on unbudgeted tasks (most sentinels) -- see wrench_core/scoring.py
     if task_response is not None:
         summary["observability"] = observability_budget_metrics(task_response.meta)
     writer.finalize(summary)

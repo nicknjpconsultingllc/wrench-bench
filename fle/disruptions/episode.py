@@ -46,19 +46,6 @@ from typing import Any, Dict, List, Optional
 
 from fle.agents.llm.parsing import PythonParser
 from fle.commons.cluster_ips import get_local_container_ips
-from fle.disruptions.scoring import (
-    detection_counts,
-    detection_metrics,
-    floor_adjusted_throughput_retained_parts,
-    frozen_baseline,
-    recovery_at,
-    recovery_potential,
-    shaped_reward_delta,
-    throughput_retained_parts,
-    time_to_recovery_parts,
-    winsorize_tr,
-)
-from fle.disruptions.trajectory import TrajectoryWriter
 from fle.env import FactorioInstance
 from fle.env.gym_env.action import Action
 from fle.env.gym_env.environment import FactorioGymEnv
@@ -69,6 +56,13 @@ from fle.env.utils.controller_loader.system_prompt_generator import (
 )
 from fle.eval.tasks.disruption_task import DisruptionRecoveryTask
 from fle.eval.tasks.task_definitions.task_registry import create_task
+from wrench_core.metrics import (
+    _fire_summary,
+    episode_metrics,
+    fired_events,
+)
+from wrench_core.scoring import recovery_potential, shaped_reward_delta
+from wrench_core.trajectory import TrajectoryWriter
 
 logger = logging.getLogger(__name__)
 
@@ -212,229 +206,6 @@ def parse_code(text: Optional[str]) -> Optional[str]:
         return None
     code, _original = result
     return code or None
-
-
-# --------------------------------------------------------------------------
-# Post-hoc metrics (the exact computation behind the Inspect scorers)
-# --------------------------------------------------------------------------
-
-
-def fired_events(ledger_events: List[dict]) -> List[dict]:
-    return [e for e in ledger_events if e.get("event") == "fired"]
-
-
-def tracked_item(samples: List[dict], fallback: str) -> str:
-    """Tracked item name; the engine's sample counts key is authoritative."""
-    for sample in reversed(samples):
-        counts = sample.get("counts") or {}
-        if counts:
-            return next(iter(counts))
-    return fallback
-
-
-def _fire_summary(fire: dict) -> dict:
-    return {
-        "kind": fire.get("kind"),
-        "tick": fire.get("tick"),
-        "seed": fire.get("seed"),
-    }
-
-
-def episode_metrics(
-    samples: List[dict],
-    ledger_events: List[dict],
-    quota_item: str,
-    end_tick: int,
-) -> Dict[str, Any]:
-    """Every post-hoc WRENCH number for one episode, from raw episode data.
-
-    Returns three blocks mirroring the Inspect scorers in
-    ``fle.eval.inspect.integration.wrench_scorers`` (``throughput_retained``,
-    ``recovery``, ``detection`` -- each ``{"value", "metadata"}``; those
-    scorers call this function, so the two paths cannot drift), plus
-    ``time_to_recovery`` (per-fire ``(ticks, recovered)`` survival data;
-    see ``scoring.time_to_recovery_parts`` for why it is not folded into
-    ``recovery``) and a flat ``scalars`` dict for consumers that want one
-    number per metric.
-
-    Denominator policy (mirrors ``fle.disruptions.scoring``): a metric that
-    is not scoreable for this episode (no fires, degenerate baseline) has
-    ``value None`` and ``metadata["scoreable"] False``. Cross-episode
-    aggregation must pool the raw numerators/denominators carried in
-    metadata (sum numerators / sum denominators), never average per-episode
-    ratios -- ``scripts/run_table.py`` does exactly that.
-    """
-    fires = fired_events(ledger_events)
-    item = tracked_item(samples, quota_item)
-
-    # -- Throughput Retained, pooled over fires ----------------------------
-    per_fire_tr = []
-    num = 0.0
-    den = 0.0
-    floor_num = 0.0
-    floor_den = 0.0
-    floor_adjusted_num_fires = 0
-    for fire in fires:
-        fire_tick = int(fire.get("tick", 0))
-        horizon = max(0, end_tick - fire_tick)
-        parts = throughput_retained_parts(samples, item, fire_tick, horizon)
-        entry = _fire_summary(fire)
-        entry["horizon_ticks"] = horizon
-        entry["baseline_per_min"] = frozen_baseline(samples, item, fire_tick)
-        if parts is not None:
-            actual, expected = parts
-            entry["actual"] = actual
-            entry["expected"] = expected
-            entry["tr"] = winsorize_tr(actual / expected)
-            num += actual
-            den += expected
-        else:
-            entry["actual"] = None
-            entry["expected"] = None
-            entry["tr"] = None
-
-        floor_parts = floor_adjusted_throughput_retained_parts(
-            samples, item, fire_tick, horizon, fire
-        )
-        if floor_parts is not None:
-            floor_actual, floor_expected = floor_parts
-            entry["floor_actual"] = floor_actual
-            entry["floor_expected"] = floor_expected
-            entry["floor_tr"] = winsorize_tr(floor_actual / floor_expected)
-            floor_num += floor_actual
-            floor_den += floor_expected
-            floor_adjusted_num_fires += 1
-        else:
-            entry["floor_actual"] = None
-            entry["floor_expected"] = None
-            entry["floor_tr"] = None
-        per_fire_tr.append(entry)
-
-    scoreable = den > 0
-    pooled: Optional[float] = winsorize_tr(num / den) if scoreable else None
-    floor_scoreable = floor_den > 0
-    floor_pooled: Optional[float] = (
-        winsorize_tr(floor_num / floor_den) if floor_scoreable else None
-    )
-    throughput_retained = {
-        "value": pooled,
-        "metadata": {
-            "scoreable": scoreable,
-            "item": item,
-            "num_fires": len(fires),
-            "pooled_numerator": num,
-            "pooled_denominator": den,
-            "floor_adjusted_scoreable": floor_scoreable,
-            "floor_adjusted_num_fires": floor_adjusted_num_fires,
-            "floor_adjusted_pooled": floor_pooled,
-            "floor_adjusted_pooled_numerator": floor_num,
-            "floor_adjusted_pooled_denominator": floor_den,
-            "fires": per_fire_tr,
-        },
-    }
-
-    # -- Recovery at budget (budget = remaining episode) ---------------------
-    per_fire_recovery = []
-    ttr_per_fire = []
-    recovered = 0
-    scoreable_fires = 0
-    for fire in fires:
-        fire_tick = int(fire.get("tick", 0))
-        budget = max(0, end_tick - fire_tick)
-        result = recovery_at(samples, item, fire_tick, budget)
-        entry = _fire_summary(fire)
-        entry["budget_ticks"] = budget
-        entry["recovered"] = result
-        per_fire_recovery.append(entry)
-        if result is not None:
-            scoreable_fires += 1
-            if result:
-                recovered += 1
-        ttr_entry = _fire_summary(fire)
-        ttr_entry["parts"] = time_to_recovery_parts(samples, item, fire_tick, budget)
-        ttr_per_fire.append(ttr_entry)
-
-    recovery_scoreable = scoreable_fires > 0
-    rate = recovered / scoreable_fires if recovery_scoreable else None
-    recovery = {
-        "value": rate,
-        "metadata": {
-            "scoreable": recovery_scoreable,
-            "item": item,
-            "num_fires": len(fires),
-            "recovered": recovered,
-            "scoreable_fires": scoreable_fires,
-            "fires": per_fire_recovery,
-        },
-    }
-
-    ttr_scoreable = [e["parts"] for e in ttr_per_fire if e["parts"] is not None]
-    time_to_recovery = {
-        # Mean over scoreable fires, right-censored at each fire's budget.
-        # A one-episode display number only: pool the per-fire (ticks,
-        # recovered) pairs with a survival estimator across episodes.
-        "mean_ticks": (
-            sum(p["ticks"] for p in ttr_scoreable) / len(ttr_scoreable)
-            if ttr_scoreable
-            else None
-        ),
-        "fires": ttr_per_fire,
-    }
-
-    # -- Detection ---------------------------------------------------------
-    det = detection_metrics(ledger_events, fires)
-    counts = detection_counts(ledger_events, fires)
-    latencies = det["latencies"]
-    mean_latency = sum(latencies) / len(latencies) if latencies else None
-    detection = {
-        "value": det["recall"],
-        "metadata": {
-            "precision": det["precision"],
-            "precision_strict": det["precision_strict"],
-            "recall": det["recall"],
-            "latencies": latencies,
-            "mean_latency_ticks": mean_latency,
-            **{
-                k: counts[k]
-                for k in (
-                    "matched_reports",
-                    "matched_reports_strict",
-                    "num_reports",
-                    "matched_fires",
-                    "num_fires",
-                )
-            },
-        },
-    }
-
-    scalars = {
-        "throughput_retained": pooled,
-        "throughput_retained_raw": num / den if scoreable else None,
-        "throughput_retained_floor_adj": floor_pooled,
-        "tr_scoreable": scoreable,
-        "tr_pooled_numerator": num,
-        "tr_pooled_denominator": den,
-        "recovery_rate": rate,
-        "recovery_scoreable_fires": scoreable_fires,
-        "recovery_recovered": recovered,
-        "time_to_recovery_ticks": time_to_recovery["mean_ticks"],
-        "detection_recall": det["recall"],
-        "detection_precision_strict": det["precision_strict"],
-        "detection_precision": det["precision"],
-        "detection_latency_ticks": mean_latency,
-        "num_fires": len(fires),
-        "num_reports": counts["num_reports"],
-    }
-
-    return {
-        "item": item,
-        "num_fires": len(fires),
-        "throughput_retained": throughput_retained,
-        "recovery": recovery,
-        "time_to_recovery": time_to_recovery,
-        "detection": detection,
-        "scalars": scalars,
-    }
 
 
 # --------------------------------------------------------------------------

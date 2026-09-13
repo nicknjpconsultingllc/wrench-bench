@@ -8,7 +8,7 @@ Per-seed variation adds the seed offset (0..seeds-1) to every
 DisruptionSpec seed in a task's config (DisruptionRecoveryTask.with_seed_offset);
 seed 0 is the canonical registry configuration.
 
-Aggregation uses the pooled-ratio rule (see fle/disruptions/scoring.py):
+Aggregation uses the pooled-ratio rule (see wrench_core/scoring.py):
 per-(model, task) metrics are sums of raw numerators over sums of raw
 denominators across seeds and fires -- never means of per-episode ratios.
 
@@ -36,7 +36,7 @@ from pathlib import Path
 # Ensure the repo root is importable when run as `python scripts/run_table.py`.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from fle.disruptions.scoring import winsorize_tr  # noqa: E402
+from wrench_core.scoring import winsorize_tr  # noqa: E402
 from fle.eval.tasks.task_definitions.disruption.sentinel_tasks import (  # noqa: E402
     DISRUPTION_TASKS,
 )
@@ -131,7 +131,7 @@ def collect_episode_rows(logs):
                     "throughput_retained": tr_value,
                     # Raw (un-winsorized) pooled TR ratio for this episode:
                     # num/den before winsorize_tr() clamps it to
-                    # [-0.5, 1.5]. See fle/disruptions/scoring.py
+                    # [-0.5, 1.5]. See wrench_core/scoring.py
                     # throughput_retained_parts docstring -- kept unclamped
                     # so dramatic overbuild (TR > 1.5) stays visible instead
                     # of pegging at the winsorize cap like the headline TR
@@ -145,7 +145,7 @@ def collect_episode_rows(logs):
                     "tr_numerator": ep_tr_num,
                     "tr_denominator": ep_tr_den,
                     # Redundancy-floor-adjusted TR (see
-                    # fle/disruptions/scoring.py
+                    # wrench_core/scoring.py
                     # floor_adjusted_throughput_retained_parts): additive
                     # alongside TR/TR (raw) above, never replacing them.
                     # Only defined for entity_destruction fires carrying a
@@ -223,7 +223,7 @@ def aggregate_rows(rows):
                 # same sum-numerator/sum-denominator way as TR/TR (raw)
                 # above -- see the per-episode comment in
                 # collect_episode_rows and
-                # fle/disruptions/scoring.py:floor_adjusted_throughput_retained_parts.
+                # wrench_core/scoring.py:floor_adjusted_throughput_retained_parts.
                 "throughput_retained_floor_adj": (
                     winsorize_tr(tr_floor_num / tr_floor_den)
                     if tr_floor_den > 0
@@ -261,14 +261,14 @@ def write_markdown(path: Path, aggregates, rows, args):
         "Aggregates use the pooled-ratio rule: sum of raw numerators over sum",
         "of raw denominators across seeds/fires (never mean-of-ratios).",
         "`-` = not scoreable (no fires with a valid frozen baseline).",
-        "TR is winsorized to [-0.5, 1.5] (see fle/disruptions/scoring.py) and",
+        "TR is winsorized to [-0.5, 1.5] (see wrench_core/scoring.py) and",
         "is the headline metric. TR (raw) is the same pooled ratio before",
         "that clamp -- it can exceed 1.5 when recovery dramatically",
         "overbuilds past the pre-disruption baseline, which TR alone cannot",
         "show once it pegs at the cap (docs/failure_taxonomy.md finding V4).",
         "TR (floor-adj) subtracts a passive-redundancy floor (fixed at fire",
         "time, non-manipulable -- see",
-        "fle/disruptions/scoring.py:floor_adjusted_throughput_retained_parts)",
+        "wrench_core/scoring.py:floor_adjusted_throughput_retained_parts)",
         "from both TR's numerator and denominator, isolating the agent's own",
         "recovery contribution. Only defined for entity_destruction fires; `-`",
         "elsewhere (e.g. no entity_destruction fire this episode/group).",
@@ -431,7 +431,7 @@ def main():
         "trajectory_length": args.trajectory_length,
         "log_dir": str(run_dir / "logs"),
         "pooling": "sum of raw numerators / sum of raw denominators "
-        "across seeds and fires (see fle/disruptions/scoring.py)",
+        "across seeds and fires (see wrench_core/scoring.py)",
         "episodes": rows,
         "aggregates": aggregates,
     }

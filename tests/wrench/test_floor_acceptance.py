@@ -43,7 +43,7 @@ import socket
 
 import pytest
 
-from fle.disruptions.scoring import throughput_retained
+from wrench_core.scoring import throughput_retained
 from fle.env.entities import Position, Direction
 from fle.env.game_types import Prototype, Resource
 
