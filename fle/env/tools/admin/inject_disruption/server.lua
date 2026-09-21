@@ -95,7 +95,7 @@ KINDS.entity_destruction = function(spec)
     -- honestly-approximate mitigation that meaningfully reduces the
     -- overcounting risk, not a perfect fix. Non-manipulable by the agent
     -- (computed before it can react) -- feeds the floor-adjusted TR in
-    -- fle/disruptions/scoring.py (floor_adjusted_throughput_retained_parts).
+    -- wrench_core/scoring.py (floor_adjusted_throughput_retained_parts).
     local same_type_total = 0
     if e.electric_network_id then
         for _, other in pairs(es) do

@@ -57,6 +57,8 @@ dependencies = [
     "hf>=0.0.14",
     "psycopg2-binary>=2.9.10",
     "fastapi>=0.68.0",
+    # WRENCH measurement contract (scorers, ledger, spec, metrics, trajectory).
+    "wrench-core>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -135,6 +137,11 @@ python_files = "test_*.py"
 [project.urls]
 homepage = "https://jackhopkins.github.io/factorio-learning-environment/"
 leaderboard = "https://jackhopkins.github.io/factorio-learning-environment/leaderboard/"
+
+[tool.uv.sources]
+# Private until ~2026-09-19; install from a local checkout meanwhile:
+#   uv pip install -e /path/to/wrench
+wrench-core = { git = "https://github.com/nicknjpconsultingllc/wrench" }
 
 [[tool.uv.index]]
 name = "pypi"

@@ -8,7 +8,7 @@ store: they re-run ``fle.disruptions.episode.episode_metrics`` (the same
 function ``WrenchEpisode.finalize`` and the verifiers package use) at
 scoring time.
 
-Denominator policy (mirrors fle.disruptions.scoring): when a metric is not
+Denominator policy (mirrors wrench_core.scoring): when a metric is not
 scoreable for an episode (no fires, degenerate baseline), the Score value is
 NaN and metadata["scoreable"] is False. Aggregation over seeds must use the
 raw numerators/denominators exposed in metadata (pooled-ratio rule: sum
@@ -54,7 +54,7 @@ class WrenchData(StoreModel):
     quota_met: bool = Field(default=False)
     error: str = Field(default="")
     # Dense per-step potential-based reward-shaping signal (see
-    # fle.disruptions.scoring.recovery_potential / shaped_reward_delta),
+    # wrench_core.scoring.recovery_potential / shaped_reward_delta),
     # accumulated incrementally by WrenchEpisode.drain(). Purely additive:
     # no existing scorer reads this field, and it is never surfaced to the
     # agent. Each entry is {tick, fire_tick, phi, delta}.
@@ -80,7 +80,7 @@ def throughput_retained_scorer() -> Scorer:
     (``floor_adjusted_pooled_numerator``/``_denominator``,
     ``floor_adjusted_num_fires``) alongside the plain TR numbers above --
     additive, never replacing them. See
-    ``fle.disruptions.scoring.floor_adjusted_throughput_retained_parts`` for
+    ``wrench_core.scoring.floor_adjusted_throughput_retained_parts`` for
     the metric definition; it is only defined for ``entity_destruction``
     fires carrying a ``same_type_total`` redundancy count, so fires of other
     kinds (or missing the field) simply don't contribute to this pool,
@@ -144,7 +144,7 @@ def recovery_scorer() -> Scorer:
 def detection_scorer() -> Scorer:
     """Detection recall (value) plus precision/latency detail (metadata).
 
-    Vacuous cases follow fle.disruptions.scoring.detection_metrics:
+    Vacuous cases follow wrench_core.scoring.detection_metrics:
     recall=1.0 with no fires, precision=1.0 with no reports. Raw match
     counts are exposed for cross-seed pooling.
     """

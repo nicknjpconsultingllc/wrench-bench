@@ -1,7 +1,7 @@
 """Detection-scoring anti-spam guard: proves report_fault spam no longer
 scores the same as a single genuine detection.
 
-Context (see fle/disruptions/scoring.py's DETECTION_PRECISION_FLOOR and
+Context (see wrench_core/scoring.py's DETECTION_PRECISION_FLOOR and
 detection_counts/detection_metrics docstrings for the full writeup):
 report_fault is a free, unmetered no-op tool (fle.env.tools.agent
 .report_fault; absent from fle.eval.tasks.observability_budget
@@ -16,7 +16,7 @@ event (report volume keeps inflating the denominator, not the numerator)
 and gates recall to 0.0 whenever precision falls below
 DETECTION_PRECISION_FLOOR. This file proves that gate holds against a real
 Factorio server, not just synthetic ledger fixtures (tests/wrench
-/test_scoring.py covers the synthetic case).
+/test_scoring.py in wrench_core covers the synthetic case).
 
 This file connects directly to port 27001, NOT the shared tests/wrench
 fixture (which owns 27000) or test_adaptive_strike.py's dedicated port
@@ -39,7 +39,7 @@ import socket
 
 import pytest
 
-from fle.disruptions.scoring import detection_counts, detection_metrics
+from wrench_core.scoring import detection_counts, detection_metrics
 from fle.env.entities import Position
 from fle.env.game_types import Prototype
 
@@ -201,7 +201,7 @@ def run_episode(instance, policy, furnace_pos=(0.0, 0.0)):
       reports it once, accurately, then stops.
 
     Returns the raw ledger events and the fired-event dict so the caller
-    can score with fle.disruptions.scoring.
+    can score with wrench_core.scoring.
     """
     game = instance.namespace
     engine = instance.controllers["inject_disruption"]

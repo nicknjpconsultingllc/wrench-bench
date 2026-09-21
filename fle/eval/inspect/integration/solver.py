@@ -317,7 +317,7 @@ Now begin working toward this objective step by step."""
 
             # WRENCH per-step trajectory capture; None (no-op) unless the
             # WRENCH_TRAJECTORY_DIR env var is set.
-            from fle.disruptions.trajectory import TrajectoryWriter
+            from wrench_core.trajectory import TrajectoryWriter
 
             wrench_writer = TrajectoryWriter.for_env(
                 f"{env_id}_run{run_idx}_{int(time.time())}"

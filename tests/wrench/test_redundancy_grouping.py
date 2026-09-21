@@ -2,7 +2,7 @@
 grouping fix (fle/env/tools/admin/inject_disruption/server.lua).
 
 Background (see the module comment on REDUNDANCY_RADIUS in server.lua, and
-fle.disruptions.scoring._redundancy_total's docstring): same_type_total used
+wrench_core.scoring._redundancy_total's docstring): same_type_total used
 to be a raw "how many entities share this name anywhere on the map" count,
 which over-counted an unrelated, distant same-named entity (e.g. an
 abandoned early build or an over-provisioned spare) that has no bearing on

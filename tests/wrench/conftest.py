@@ -2,7 +2,7 @@
 
 Overrides the parent conftest's session-scoped `instance` fixture with one
 that connects straight to the benchmark server on localhost:27000, and
-overrides the autouse reset fixture so pure-unit tests (test_scoring.py)
+overrides the autouse reset fixture so pure-unit tests (test_episode.py, test_disruption_task.py, ...)
 never touch -- or wait for -- a Factorio server.
 
 Live tests are marked `wrench_live`; they are skipped automatically when
