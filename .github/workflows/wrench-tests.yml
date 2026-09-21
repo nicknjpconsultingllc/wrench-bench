@@ -20,7 +20,9 @@ jobs:
           cache-dependency-glob: "**/pyproject.toml"
 
       - name: Install
-        run: uv pip install -e . pytest
+        run: |
+          uv pip install "wrench-core @ git+https://github.com/nicknjpconsultingllc/wrench" pytest
+          uv pip install -e .
 
       - name: Unit tests (no Factorio server; live tests are marked wrench_live)
         run: |

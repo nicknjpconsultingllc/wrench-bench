@@ -139,8 +139,7 @@ homepage = "https://jackhopkins.github.io/factorio-learning-environment/"
 leaderboard = "https://jackhopkins.github.io/factorio-learning-environment/leaderboard/"
 
 [tool.uv.sources]
-# Private until ~2026-09-19; install from a local checkout meanwhile:
-#   uv pip install -e /path/to/wrench
+# wrench_core holds the shared measurement contract (public repo).
 wrench-core = { git = "https://github.com/nicknjpconsultingllc/wrench" }
 
 [[tool.uv.index]]
